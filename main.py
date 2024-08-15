@@ -59,13 +59,14 @@ enemy_grid = resize_ocean
 last_hit_message = ""
 ships_left = 8
 # ships_info = [('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 5), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 3), ("assets/SHIPS/ShipRescue.png", "Rescue", 4), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3)]
-ships_info = [("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 3), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3),("assets/SHIPS/ShipRescue.png", "Rescue", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
+ships_info = [("assets/SHIPS/ShipCarrierHull.png", "Carrier", 3), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 3), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 2),("assets/SHIPS/ShipRescue.png", "Rescue", 2), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
 # ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4),('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
 
 starting_enemy_ship_locs = []
 all_ships = []
 display_index = 0
 display_ship_path = ships_info[display_index][0]
+display_ship_title = ships_info[display_index][1]
 
 #grid variables
 # cols = [SIDE_MEDU_WIDTH, 320, 440, 560, 680, 800, 920,a 1040, 1160, 1280]
@@ -80,10 +81,10 @@ rows = []
 user_ship_coord = []
 player_target_boxes = []
 enemy_target_boxes = []
-taken_ship_locs = []
 hit_boxes = []
 enemy_hit_boxes = []
 loaded_ships = pygame.sprite.Group()
+enemy_ships = pygame.sprite.Group()
 
 
 
@@ -127,6 +128,12 @@ class Ship(pygame.sprite.Sprite):
             if self.rect.right > GRID_RIGHT:
                 self.rect.x -= self.rect.right - GRID_RIGHT
             if self.rect.left < GRID_LEFT:
+                self.rect.x += GRID_RIGHT
+        if self.type == "Enemy":
+            if self.rect.right > SIDE_INDENT + GRID_WIDTH:
+                self.rect.x -= self.rect.right - (SIDE_INDENT + GRID_WIDTH)
+                print("ship pushed")
+            if self.rect.left < SIDE_INDENT:
                 self.rect.x += GRID_RIGHT
                 
     def find_new_loc(self, pos_arr):
@@ -204,16 +211,19 @@ for i in range(NUM_OF_COLS):
         enemy_target_boxes.append(enemy_box)
         
 
-available_ship_locs = [s for s in enemy_target_boxes if s not in taken_ship_locs]
+
 
 # choose 8 locations for user ships to be placed in the beginning of the game
-for i in range(0,len(ships_info)):
-    found = False
-    while found == False:
-        rand_box = random.choice(available_ship_locs)
-        if rand_box.coord not in user_ship_coord:
-            user_ship_coord.append((rand_box.pos))
-            found = True
+# for i in range(0,len(ships_info)):
+#     taken_ship_locs = []
+#     available_ship_locs = [s for s in enemy_target_boxes if s not in taken_ship_locs]
+#     found = False
+#     while found == False:
+#         rand_box = random.choice(available_ship_locs)
+#         if rand_box.coord not in user_ship_coord:
+#             user_ship_coord.append((rand_box.pos))
+#             taken_ship_locs.append(rand_box.pos)
+#             found = True
 
 
 
@@ -231,7 +241,58 @@ def load_ships(type):
         if type == "Player":
             loaded_ships.add(ship)
 
-load_ships("Player")
+def select_correct_loc(ship, ship_len, angle, available_ship_locs, taken_ship_locs):
+    pass
+
+def load_ships_test(type):
+    angles = [90, 180, 270, 0]
+    taken_ship_locs = []
+    for ship in ships_info:
+        if type == "Player":
+            available_ship_locs = [s.pos for s in enemy_target_boxes if s.pos not in taken_ship_locs]
+        elif type == "Enemy":
+            available_ship_locs = [s.pos for s in player_target_boxes if s.pos not in taken_ship_locs]
+        ship_len = ship[2]
+        print(ship[1])
+        print(taken_ship_locs)
+        ship_angle = random.choice(angles)
+        ship_height = ship_len * CELL_SIZE
+        ship_width = CELL_SIZE
+        ship_img = pygame.image.load(ship[0])
+        
+
+        rand_box = random.choice(available_ship_locs)
+        user_ship_coord.append(rand_box)
+        current_ship_coord = user_ship_coord[-1]
+        new_ship = Ship(type, ship_img, ship_width, ship_height, ship_angle, ship[2], ship[1], (current_ship_coord[0], current_ship_coord[1]))
+        new_ship.adjust_ship()
+        print(type)
+        print("current ship:" + new_ship.title)
+        print("Prev coord before rotation:" + str(current_ship_coord))
+        print("Angle: " + str(ship_angle))
+        print("new top left: " + str(new_ship.rect.topleft))
+        print("length: " + str(ship_len))
+        
+        #Add all of ship coords to the taken loc array so that no other ship can be placed in that location
+        for i in range(0,ship_len):
+            if ship_angle == 0 or ship_angle ==180:
+                ship_y = new_ship.rect.topleft[1] + (CELL_SIZE * i)
+                ship_x = new_ship.rect.topleft[0]
+            if ship_angle == 90 or ship_angle == 270:
+                ship_y = new_ship.rect.topleft[1] 
+                ship_x = new_ship.rect.topleft[0] + (CELL_SIZE * i)
+            taken_ship_locs.append((ship_x, ship_y))
+            new_ship.placed = True
+            
+          
+        if type == "Player":
+            loaded_ships.add(new_ship)
+        if type == "Enemy":
+            enemy_ships.add(new_ship)
+            
+
+load_ships_test("Player")
+load_ships_test("Enemy")
 
 
 def collide_if_not_self(ship_one, ship_two):
@@ -240,18 +301,18 @@ def collide_if_not_self(ship_one, ship_two):
     return False 
 
 
-for ship in loaded_ships:
-    # ship.adjust_ship()
-    while ship.placed == False:
-        other_ships = pygame.sprite.Group([s for s in loaded_ships if s != ship])
-        if pygame.sprite.spritecollide(ship, other_ships, False):
-            # ship.find_new_loc(enemy_target_boxes)
-            ship.adjust_ship()
-            print(ship.rect.bottom)
-            ship.placed = True
-        else:
-            ship.adjust_ship()
-            ship.placed = True
+# for ship in loaded_ships:
+#     # ship.adjust_ship()
+#     while ship.placed == False:
+#         other_ships = pygame.sprite.Group([s for s in loaded_ships if s != ship])
+#         if pygame.sprite.spritecollide(ship, other_ships, False):
+#             # ship.find_new_loc(enemy_target_boxes)
+#             ship.adjust_ship()
+#             print(ship.rect.bottom)
+#             ship.placed = True
+#         else:
+#             ship.adjust_ship()
+#             ship.placed = True
         
 
 
@@ -335,7 +396,7 @@ while True:
         screen.blit(player_grid, (SIDE_INDENT,SIDE_INDENT))
         screen.blit(enemy_grid, (SCREEN_WIDTH - (GRID_WIDTH + SIDE_INDENT),SIDE_INDENT))
         
-
+        enemy_ships.draw(screen)
                 
     #Draw boxes that are not hit
         for target in player_target_boxes:
@@ -358,7 +419,11 @@ while True:
     # Draw display ship to show the player which ship is being moved
     screen.blit(display_ship, (SCREEN_WIDTH//2 - (display_ship.get_width()//2), SCREEN_HEIGHT//3))
     
+    text = smaller_plain_font.render(display_ship_title, True, GREEN)
+    screen.blit(text, (SCREEN_WIDTH//2 - (display_ship.get_width()//2), 200))
+    
     loaded_ships.draw(screen)
+
             
 
     
