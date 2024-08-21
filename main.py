@@ -1,8 +1,10 @@
 import sys, pygame
 import pygame.locals
 import random
+from pygame import mixer
 
 pygame.init()
+pygame.mixer.init
 
 SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 900
@@ -29,6 +31,7 @@ WHITE = (255, 255, 255)
 GREEN = (0, 255, 0)
 YELLOW = (255, 223, 0)
 ORANGE = (255, 165, 0)
+TEAL = (3, 244, 252)
 RED = (255,0,0)
 FONT_SIZE = 40
 SMALL_FONT_SIZE = 30
@@ -59,6 +62,10 @@ player_grid = resize_ocean
 enemy_grid = resize_ocean
 last_hit_message = ""
 game_over = False
+player_turn = "Player"
+
+#Music and effects
+splash_sound = mixer.Sound("./assets/cannon_miss.ogg")
 
 # ships_info = [('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 5), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 3), ("assets/SHIPS/ShipRescue.png", "Rescue", 4), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3)]
 ships_info = [("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 3), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3),("assets/SHIPS/ShipRescue.png", "Rescue", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
@@ -169,10 +176,57 @@ class Ship(pygame.sprite.Sprite):
         print(f'{self.title} was moved {direction}')      
 
 
+def check_enemy_hit(target):
+    for ship in enemy_ships:
+        if ship.rect.collidepoint(target.box.center):
+            return True
+        else:
+            return False
+        
+    
+
+def enemy_choose_target():
+    global enemy_hit_boxes
+    global player_turn
+    rand_box = random.choice(enemy_target_boxes)
+    if rand_box not in enemy_hit_boxes:
+        enemy_hit_boxes.append(rand_box)
+        if check_enemy_hit(rand_box):
+            print("Hit")
+            enemy_choose_target
+        else:
+            print("Miss")
+            player_turn = "Player"
+    else:
+        print("Already taken")
+        player_turn = "Player"
+        
+    print(rand_box)
+    
+    
+def missile_sound(collide):
+    global splash_sound
+    global player_turn
+    if collide == False and player_turn == "Player":
+        player_turn = "Enemy"
+        splash_sound.play()
+        
+    elif collide:
+        pass
+        # print("hit!!!")
+        
+        
+    
+    
+
+
 def check_box_ship_collision(target, ships_group, mouse_pos):
     global enemy_ships_left
+    global player_turn
+    collide = False
     for ship in ships_group:
         if ship.rect.collidepoint(mouse_pos) and target.clicked == False:
+            player_turn = "Player"
             target.hit = True
             if ship.exploded == False and target not in hit_boxes:
                 ship.hits-= 1
@@ -182,6 +236,11 @@ def check_box_ship_collision(target, ships_group, mouse_pos):
                 print(f'{ship.title} has exploded')
                 print(f'{enemy_ships_left} ships left')
                 ship.exploded = True
+            collide = True
+        print(player_turn)
+        print(collide)  
+        missile_sound(collide)
+
 
 
 class TargetBox():
@@ -201,7 +260,7 @@ class TargetBox():
     def draw(self):
         # border_rect = pygame.rect.Rect(self.pos[0] - 2, self.pos[1] - 2, self.width + 4, self.height + 4)
         if self.type == "Player":
-            pygame.draw.rect(screen, BLACK, self.border_rect)
+            pygame.draw.rect(screen, TEAL, self.border_rect)
             pygame.draw.rect(screen, self.color, self.box)
         if self.type == "Enemy":
             # pygame.draw.rect(screen, CLEAR_DARK_PURPLE, self.border_rect)
@@ -221,15 +280,19 @@ class TargetBox():
 
     
     def checkClicked(self):
-        mouse_pos = pygame.mouse.get_pos()
-        mouse_click = pygame.mouse.get_pressed()
-        if self.box.collidepoint(mouse_pos):
-            if mouse_click[0] == 1 and self.clicked == False:
-                check_box_ship_collision(self, enemy_ships, mouse_pos)
-                self.clicked = True
-                return True
-        if mouse_click[0] == 0:
-            self.clicked = False
+        if player_turn == "Player":
+            mouse_pos = pygame.mouse.get_pos()
+            mouse_click = pygame.mouse.get_pressed()
+            if self.box.collidepoint(mouse_pos):
+                if mouse_click[0] == 1 and self.clicked == False:
+                    check_box_ship_collision(self, enemy_ships, mouse_pos)
+                    self.clicked = True
+                    return True
+            if mouse_click[0] == 0:
+                self.clicked = False
+            
+
+
 
 
 #SET COLUMNS AND ROWS FOR ENEMY AND PLAYER GRID
@@ -320,10 +383,11 @@ def move_collided_ships(ship, ships_group):
         other_ship_title = collided[0].title
         ship.find_new_loc(0)
         move_collided_ships(ship, ships_group)
-        print(ship.type)
-        print(f'{ship.title} has collided with {other_ship_title}')
+        # print(ship.type)
+        # print(f'{ship.title} has collided with {other_ship_title}')
     else:
         print(f'{ship.title} was placed')
+  
         
 def check_ship_collision(type):
     if type == "Enemy":
@@ -435,6 +499,7 @@ while True:
         enemy_ships.draw(screen)
                 
     #Draw boxes that are not hit
+        #Enemy boxes that the player is targeting
         for target in player_target_boxes:
             hit_boxes_coords = [box.coord for box in hit_boxes ]
             if target.coord not in hit_boxes_coords:
@@ -444,9 +509,14 @@ while True:
             if target.checkClicked() and game_over == False:
                 hit_boxes.append(target)
                 
+        
+        #Player boxes that the enemy is targeting
         for enemy_target in enemy_target_boxes:
-            if enemy_target.coord not in enemy_hit_boxes:
+            enemy_hit_boxes_coords = [box.coord for box in enemy_hit_boxes ]
+            if enemy_target.coord not in enemy_hit_boxes_coords:
                 enemy_target.draw()
+            elif enemy_target.coord in enemy_hit_boxes_coords:
+                enemy_target.draw_hit()
         
         
         #Show Ships that have exploded      
@@ -454,6 +524,10 @@ while True:
             if ship.hits == 0:
                 screen.blit(ship.image, ship.rect)
                 check_game_over()
+        
+        if player_turn == "Enemy":
+            # print(f'{player_turn} Duh')
+            enemy_choose_target()
 
         
         
@@ -467,6 +541,21 @@ while True:
         game_status_surf = smaller_plain_font.render(game_status_txt, True, GREEN)
         if game_over:
             screen.blit(game_status_surf, (SCREEN_WIDTH//2 - (game_status_surf.get_width()//2), 100))
+            
+        #Draw whose turn
+        if player_turn == "Enemy":
+            player_turn_txt = "ENEMY"
+        elif player_turn == "Player":
+            player_turn_txt = "YOUR"
+        else:
+            player_turn_txt = ""
+        
+        full_player_turn = f'{player_turn} TURN'
+        
+        
+        turn_text = smaller_plain_font.render(player_turn, True, PURPLE, WHITE)
+        screen.blit(turn_text, (SCREEN_WIDTH//2 - (turn_text.get_width()//2), 500))
+        
         
         
         loaded_ships.draw(screen)
