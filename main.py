@@ -15,7 +15,9 @@ SIDE_INDENT = 20
 TOP_INDENT = 20
 GRID_BOTTOM = GRID_HEIGHT + TOP_INDENT
 GRID_RIGHT = SCREEN_WIDTH - SIDE_INDENT
-GRID_LEFT = SIDE_INDENT + GRID_WIDTH
+GRID_LEFT = SCREEN_WIDTH - SIDE_INDENT - GRID_WIDTH
+ENEMY_GRID_RIGHT = SIDE_INDENT + GRID_WIDTH
+ENEMY_GRID_LEFT = SIDE_INDENT
 BORDER_WIDTH = 1
 NUM_OF_COLS = 10
 NUM_OF_ROWS = 10
@@ -56,19 +58,28 @@ plain_font = pygame.font.SysFont("skia", FONT_SIZE, bold=True)
 smaller_plain_font = pygame.font.SysFont("skia", SMALL_FONT_SIZE, bold=True)
 super_small_text = pygame.font.SysFont("skia", SUPER_SMALL_FONT, bold=True)
 main_menu = False
-ocean = pygame.image.load("assets/frederic-christian-zaGqaYfbNp8-unsplash.jpg")
+ocean = pygame.image.load("assets/Ocean-Background.jpg")
 resize_ocean = pygame.transform.scale(ocean, (GRID_WIDTH, GRID_HEIGHT))
 player_grid = resize_ocean
 enemy_grid = resize_ocean
 last_hit_message = ""
 game_over = False
 player_turn = "Player"
+ship_direction = 0
 
 #Music and effects
 splash_sound = mixer.Sound("./assets/cannon_miss.ogg")
+sinking_ship_sound = mixer.Sound("./assets/full-explosion.wav")
+plane_missile_sound = mixer.Sound("./assets/missile-sound.wav")
+plane_flying_sound = mixer.Sound("./assets/missile-sound.wav")
+enemy_small_explostion_sound = mixer.Sound("./assets/Small-Explostion.wav")
+enemy_plane_sound = mixer.Sound("./assets/Plane-Flyby.wav")
+sound_arr = []
+
+
 
 # ships_info = [('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 5), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 3), ("assets/SHIPS/ShipRescue.png", "Rescue", 4), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3)]
-ships_info = [("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 3), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3),("assets/SHIPS/ShipRescue.png", "Rescue", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
+ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 5), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipRescue.png", "Rescue", 4),  ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
 # ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4),('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
 
 
@@ -79,9 +90,6 @@ display_index = 0
 display_ship_path = ships_info[display_index][0]
 display_ship_title = ships_info[display_index][1]
 
-#grid variables
-# cols = [SIDE_MEDU_WIDTH, 320, 440, 560, 680, 800, 920,a 1040, 1160, 1280]
-# rows = [0, 120, 240, 360, 480, 600, 720, 840, 960, 1080, 1200]
 
 cols = []
 enemy_cols = []
@@ -96,8 +104,19 @@ hit_boxes = []
 enemy_hit_boxes = []
 loaded_ships = pygame.sprite.Group()
 enemy_ships = pygame.sprite.Group()
+explosions = pygame.sprite.Group()
 ships_left = 8
 enemy_ships_left = 8
+
+
+class explosion(pygame.sprite.Sprite):
+    def __init__(self, image, pos, width, height):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.transform.scale(image, (width, height))
+        self.pos = pos
+        self.width = width
+        self.height = height
+        self.rect = self.image.get_rect()
 
 
 
@@ -151,19 +170,50 @@ class Ship(pygame.sprite.Sprite):
             if self.rect.left < SIDE_INDENT:
                 self.rect.x += GRID_RIGHT
                 
-    def find_new_loc(self, direc_index):
-        if self.rect.top <= TOP_INDENT + FULL_CELL_SIZE:
-            direc_index+= 1
-        if self.rect.right >= GRID_RIGHT - FULL_CELL_SIZE:
-            direc_index+= 1
-        if self.rect.right <= GRID_LEFT + FULL_CELL_SIZE:
-            direc_index+= 1
-        if self.rect.top <= GRID_BOTTOM:
-            direc_index = 0
-        if direc_index > 3:
-            direc_index = 0
-        directions = ["UP", "LEFT", "RIGHT", "DOWN"]
-        direction = directions[direc_index]
+    def find_new_loc(self, left_side, right_side):
+        TOP_RIGHT = (self.rect.top - FULL_CELL_SIZE <= TOP_INDENT + BORDER_WIDTH) and self.rect.right + FULL_CELL_SIZE >= right_side
+        TOP_LEFT = (self.rect.top - FULL_CELL_SIZE <= TOP_INDENT + BORDER_WIDTH) and self.rect.left - FULL_CELL_SIZE <= left_side
+        TOP = self.rect.top - FULL_CELL_SIZE <= TOP_INDENT + BORDER_WIDTH
+        LEFT = self.rect.left - FULL_CELL_SIZE <= left_side
+        RIGHT = self.rect.right + FULL_CELL_SIZE >= right_side
+        BOTTOM_RIGHT = (self.rect.bottom + FULL_CELL_SIZE >= GRID_BOTTOM) and self.rect.right + FULL_CELL_SIZE >= right_side
+        BOTTOM_LEFT = (self.rect.bottom + FULL_CELL_SIZE >= GRID_BOTTOM) and self.rect.left - FULL_CELL_SIZE <= left_side
+        BOTTOM = self.rect.bottom + FULL_CELL_SIZE >= GRID_BOTTOM
+        global ship_direction
+        if TOP_RIGHT:
+            print(f'{self.title} top is {self.rect.top} and  right is {self.rect.right}' )
+            print("Reached TOP RIGHT CORNER")
+            ship_direction = 1
+        elif TOP_LEFT:
+            print(f'{self.title} top is {self.rect.top} and  right is {self.rect.left}' )
+            print("Reached TOP LEFT CORNER")
+            ship_direction = 2
+        elif BOTTOM_RIGHT:
+            print(f'{self.title} top is {self.rect.bottom} and  right is {self.rect.right}' )
+            print("Reached BOTTOM RIGHT CORNER")
+            ship_direction = 0
+        elif BOTTOM_LEFT:
+            print(f'{self.title} top is {self.rect.bottom} and  right is {self.rect.left}' )
+            print("Reached BOTTOM LEFT CORNER")
+            ship_direction = 3
+        elif TOP:
+            print(f'{self.title} top is {self.rect.top}')
+            print("Can't go Up anymore")
+            ship_direction = 1
+        elif LEFT:
+            print(f'{self.title} left is {self.rect.left}')
+            print("Can't go Left anymore")
+            ship_direction = 2
+        elif RIGHT:
+            print(f'{self.title} right is {self.rect.right}')
+            print("Can't go Right anymore")
+            ship_direction = 0
+        elif BOTTOM:
+            print(f'{self.title} bottom is {self.rect.bottom}')
+            print("Can't go Down anymore")
+            ship_direction = 3
+        directions = ["UP", "LEFT", "DOWN", "RIGHT"]
+        direction = directions[ship_direction]
         if direction == "UP":
             self.rect.y -= FULL_CELL_SIZE
         if direction == "DOWN":
@@ -177,42 +227,71 @@ class Ship(pygame.sprite.Sprite):
 
 
 def check_enemy_hit(target):
-    for ship in enemy_ships:
-        if ship.rect.collidepoint(target.box.center):
+    global sinking_ship_sound
+    global ships_left
+    print(target.box.center)
+    for ship in loaded_ships:
+        print(ship.rect.top)
+        print(ship.rect.bottom)
+        print(ship.rect.left)
+        print(ship.rect.right)
+        
+        if ship.rect.colliderect(target.box):
+            print("Enemey HIT!!!")
+            ship.hits -= 1
+            sound_arr.append(plane_flying_sound)
+            target.hit = True
+            if ship.hits == 0:
+                ship.exploded = True
+                # sinking_ship_sound.play()
+                sound_arr.append(sinking_ship_sound)
+                ships_left -= 1
             return True
-        else:
-            return False
+    return False
         
     
 
 def enemy_choose_target():
+    global plane_missile_sound
     global enemy_hit_boxes
     global player_turn
-    rand_box = random.choice(enemy_target_boxes)
-    if rand_box not in enemy_hit_boxes:
-        enemy_hit_boxes.append(rand_box)
-        if check_enemy_hit(rand_box):
-            print("Hit")
-            enemy_choose_target
-        else:
-            print("Miss")
-            player_turn = "Player"
-    else:
-        print("Already taken")
-        player_turn = "Player"
-        
-    print(rand_box)
+    
+    
+    
+    possible_hits = [box for box in enemy_target_boxes if box not in enemy_hit_boxes]
+    if game_over == False:
+        rand_box = random.choice(possible_hits)
+        if rand_box not in enemy_hit_boxes:
+            enemy_hit_boxes.append(rand_box)
+            sound_arr.append(enemy_plane_sound)
+            if check_enemy_hit(rand_box):
+                # plane_missile_sound.play()
+                sound_arr.append(enemy_small_explostion_sound)
+                # rand_box.color = GREEN
+                print("Hit")
+                
+                player_turn = "Enemy"
+                enemy_choose_target()
+            else:
+                print("Miss")
+                player_turn = "Player"
+                sound_arr.append(splash_sound)
+
+            
+        print(rand_box)
     
     
 def missile_sound(collide):
+    global plane_missile_sound
     global splash_sound
     global player_turn
-    if collide == False and player_turn == "Player":
+    # plane_missile_sound.play(fade_ms=3000)
+    if collide:
+        player_turn = "Player"
+    elif collide == False:
         player_turn = "Enemy"
-        splash_sound.play()
+        # splash_sound.play()
         
-    elif collide:
-        pass
         # print("hit!!!")
         
         
@@ -221,6 +300,7 @@ def missile_sound(collide):
 
 
 def check_box_ship_collision(target, ships_group, mouse_pos):
+    global sinking_ship_sound
     global enemy_ships_left
     global player_turn
     collide = False
@@ -231,15 +311,21 @@ def check_box_ship_collision(target, ships_group, mouse_pos):
             if ship.exploded == False and target not in hit_boxes:
                 ship.hits-= 1
                 print(f'{ship.title}: {ship.hits} left')
+                sound_arr.append(plane_flying_sound)
             if ship.hits == 0 and ship.exploded == False:
                 enemy_ships_left -= 1
+                # sinking_ship_sound.play()
+                sound_arr.append(sinking_ship_sound)
                 print(f'{ship.title} has exploded')
                 print(f'{enemy_ships_left} ships left')
                 ship.exploded = True
             collide = True
-        print(player_turn)
-        print(collide)  
+        else:
+            player_turn = "Enemy"
+        # print(player_turn)
+        # print(collide)  
         missile_sound(collide)
+
 
 
 
@@ -274,6 +360,15 @@ class TargetBox():
         surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         surface.set_alpha(250)
         surface.fill(RED)
+        pygame.draw.rect(screen, CLEAR_DARK_PURPLE, self.border_rect)
+        screen.blit(surface, self.pos)
+        # pygame.draw.rect(surface, CLEAR_RED, self.box)
+
+    def draw_miss(self):
+        surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
+        surface.set_alpha(250)
+        surface.fill(CLEAR_DARK_PURPLE)
+        pygame.draw.rect(screen, TEAL, self.border_rect)
         screen.blit(surface, self.pos)
         # pygame.draw.rect(surface, CLEAR_RED, self.box)
         
@@ -314,6 +409,10 @@ for i in range(NUM_OF_COLS):
         enemy_box = TargetBox("Enemy", BLUE, (enemy_cols[i], rows[j]), CELL_SIZE, CELL_SIZE, i, j)
         player_target_boxes.append(box)
         enemy_target_boxes.append(enemy_box)
+
+
+for target in player_target_boxes:
+    print(target.box.x, target.box.y)
         
 
 
@@ -375,21 +474,26 @@ load_ships("Enemy")
 
 
 def move_collided_ships(ship, ships_group):
+    global ship_direction
     other_ships = [s for s in ships_group if s.title != ship.title]
     # print(ship.title)
     collided = pygame.sprite.spritecollide(ship, other_ships, False)
 
     if collided:
         other_ship_title = collided[0].title
-        ship.find_new_loc(0)
+        if ship.type == "Enemy":
+            ship.find_new_loc(ENEMY_GRID_LEFT, ENEMY_GRID_RIGHT)
+        if ship.type == "Player":
+            ship.find_new_loc(GRID_LEFT, GRID_RIGHT)
         move_collided_ships(ship, ships_group)
-        # print(ship.type)
-        # print(f'{ship.title} has collided with {other_ship_title}')
+        print(ship.type)
+        print(f'{ship.title} has collided with {other_ship_title}')
     else:
+        ship_direction = 0
         print(f'{ship.title} was placed')
   
         
-def check_ship_collision(type):
+def check_ship_to_ship_collision(type):
     if type == "Enemy":
         ships_group = enemy_ships
     elif type == "Player":
@@ -398,8 +502,8 @@ def check_ship_collision(type):
         move_collided_ships(ship, ships_group)
 
 
-check_ship_collision("Player")
-check_ship_collision("Enemy")
+check_ship_to_ship_collision("Player")
+check_ship_to_ship_collision("Enemy")
         
 
 
@@ -434,8 +538,6 @@ class Button:
         if self.button.collidepoint(mouse_pos):
             self.display_color = self.hover_color
             if mouse_click[0] == 1 and self.clicked == False:
-                # print("click")
-                # btn_sound.play()
                 self.clicked = True
                 self.update_color()
                 return True
@@ -469,8 +571,9 @@ def check_game_over():
     global game_over
     global enemy_ships_left
     if enemy_ships_left == 0:
-        print(enemy_ships_left)
-        # main_menu = True
+        game_over = True
+        
+    if ships_left == 0:
         game_over = True
 
 
@@ -496,6 +599,8 @@ while True:
         screen.blit(player_grid, (SIDE_INDENT,SIDE_INDENT))
         screen.blit(enemy_grid, (SCREEN_WIDTH - (GRID_WIDTH + SIDE_INDENT),SIDE_INDENT))
         
+        
+        #Draw Enemy ships first so that they are hidden under tarets boxes
         enemy_ships.draw(screen)
                 
     #Draw boxes that are not hit
@@ -506,7 +611,7 @@ while True:
                 target.draw()
             if target.coord in hit_boxes_coords and target.hit == True:
                 target.draw_hit()
-            if target.checkClicked() and game_over == False:
+            if (target.checkClicked() and game_over == False):
                 hit_boxes.append(target)
                 
         
@@ -515,8 +620,10 @@ while True:
             enemy_hit_boxes_coords = [box.coord for box in enemy_hit_boxes ]
             if enemy_target.coord not in enemy_hit_boxes_coords:
                 enemy_target.draw()
-            elif enemy_target.coord in enemy_hit_boxes_coords:
+            if enemy_target.coord in enemy_hit_boxes_coords and enemy_target.hit == True:
                 enemy_target.draw_hit()
+            if enemy_target.coord in enemy_hit_boxes_coords and enemy_target.hit == False:
+                enemy_target.draw_miss()
         
         
         #Show Ships that have exploded      
@@ -526,7 +633,6 @@ while True:
                 check_game_over()
         
         if player_turn == "Enemy":
-            # print(f'{player_turn} Duh')
             enemy_choose_target()
 
         
@@ -537,9 +643,18 @@ while True:
         
         ship_text = smaller_plain_font.render(display_ship_title, True, GREEN)
         screen.blit(ship_text, (SCREEN_WIDTH//2 - (ship_text.get_width()//2), 200))
-        game_status_txt = "You Won"
-        game_status_surf = smaller_plain_font.render(game_status_txt, True, GREEN)
-        if game_over:
+        
+        #Draw Game Over
+    
+        lose_txt = "You Lost!!"
+        win_txt = "You Won!!"
+            
+        
+        if game_over and ships_left == 0:
+            game_status_surf = smaller_plain_font.render(lose_txt, True, GREEN)
+            screen.blit(game_status_surf, (SCREEN_WIDTH//2 - (game_status_surf.get_width()//2), 100))
+        elif game_over and enemy_ships_left == 0:
+            game_status_surf = smaller_plain_font.render(win_txt, True, GREEN)
             screen.blit(game_status_surf, (SCREEN_WIDTH//2 - (game_status_surf.get_width()//2), 100))
             
         #Draw whose turn
@@ -557,8 +672,21 @@ while True:
         screen.blit(turn_text, (SCREEN_WIDTH//2 - (turn_text.get_width()//2), 500))
         
         
+        ships_left_text = smaller_plain_font.render(f'{ships_left} ships left', True, BLUE)
+        screen.blit(ships_left_text, (SCREEN_WIDTH//2 - (ships_left_text.get_width()//2), 600))
+
+        enemy_ships_left_text = smaller_plain_font.render(f'{enemy_ships_left} Enemy ships left', True, BLUE)
+        screen.blit(enemy_ships_left_text, (SCREEN_WIDTH//2 - (enemy_ships_left_text.get_width()//2), 700))
+        
+        
+        
         
         loaded_ships.draw(screen)
+        
+        for s in sound_arr:
+            s.play()
+            pygame.time.wait(500)
+            sound_arr.pop(0)
 
             
 
