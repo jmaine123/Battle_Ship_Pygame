@@ -1,3 +1,4 @@
+import time
 import sys, pygame
 import pygame.locals
 import random
@@ -104,12 +105,13 @@ hit_boxes = []
 enemy_hit_boxes = []
 loaded_ships = pygame.sprite.Group()
 enemy_ships = pygame.sprite.Group()
-explosions = pygame.sprite.Group()
+explosion_imgs = pygame.image.load("./assets/Single_explosion.png").convert_alpha()
+explosions_group = pygame.sprite.Group()
 ships_left = 8
 enemy_ships_left = 8
 
 
-class explosion(pygame.sprite.Sprite):
+class Explosion(pygame.sprite.Sprite):
     def __init__(self, image, pos, width, height):
         pygame.sprite.Sprite.__init__(self)
         self.image = pygame.transform.scale(image, (width, height))
@@ -117,6 +119,7 @@ class explosion(pygame.sprite.Sprite):
         self.width = width
         self.height = height
         self.rect = self.image.get_rect()
+        self.rect.center = self.pos
 
 
 
@@ -229,12 +232,11 @@ class Ship(pygame.sprite.Sprite):
 def check_enemy_hit(target):
     global sinking_ship_sound
     global ships_left
-    print(target.box.center)
     for ship in loaded_ships:
-        print(ship.rect.top)
-        print(ship.rect.bottom)
-        print(ship.rect.left)
-        print(ship.rect.right)
+        # print(ship.rect.top)
+        # print(ship.rect.bottom)
+        # print(ship.rect.left)
+        # print(ship.rect.right)
         
         if ship.rect.colliderect(target.box):
             print("Enemey HIT!!!")
@@ -265,11 +267,10 @@ def enemy_choose_target():
             enemy_hit_boxes.append(rand_box)
             sound_arr.append(enemy_plane_sound)
             if check_enemy_hit(rand_box):
-                # plane_missile_sound.play()
                 sound_arr.append(enemy_small_explostion_sound)
-                # rand_box.color = GREEN
-                print("Hit")
-                
+                new_exp = Explosion(explosion_imgs, rand_box.box.center, rand_box.width, rand_box.height)
+                # print(rand_box.pos)
+                explosions_group.add(new_exp)
                 player_turn = "Enemy"
                 enemy_choose_target()
             else:
@@ -277,8 +278,6 @@ def enemy_choose_target():
                 player_turn = "Player"
                 sound_arr.append(splash_sound)
 
-            
-        print(rand_box)
     
     
 def missile_sound(collide):
@@ -410,9 +409,6 @@ for i in range(NUM_OF_COLS):
         player_target_boxes.append(box)
         enemy_target_boxes.append(enemy_box)
 
-
-for target in player_target_boxes:
-    print(target.box.x, target.box.y)
         
 
 
@@ -685,8 +681,11 @@ while True:
         
         for s in sound_arr:
             s.play()
-            pygame.time.wait(500)
+            # pygame.time.wait(500)
             sound_arr.pop(0)
+        
+        
+        explosions_group.draw(screen)
 
             
 
