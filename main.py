@@ -13,7 +13,7 @@ SIDE_MEDU_WIDTH = 200
 GRID_WIDTH = 600
 GRID_HEIGHT = 600
 SIDE_INDENT = 20
-TOP_INDENT = 20
+TOP_INDENT = 40
 GRID_BOTTOM = GRID_HEIGHT + TOP_INDENT
 GRID_RIGHT = SCREEN_WIDTH - SIDE_INDENT
 GRID_LEFT = SCREEN_WIDTH - SIDE_INDENT - GRID_WIDTH
@@ -24,7 +24,10 @@ NUM_OF_COLS = 10
 NUM_OF_ROWS = 10
 CELL_SIZE = (GRID_WIDTH - (BORDER_WIDTH * NUM_OF_COLS)) // NUM_OF_COLS - 1
 FULL_CELL_SIZE = CELL_SIZE + (BORDER_WIDTH * 2)
+
+#COLORS
 BLUE = (68, 132, 235)
+DARK_BLUE = (16, 52, 110)
 CLEAR_RED = (255,0,0,85)
 CLEAR_DARK_PURPLE = (51, 0, 204, 85)
 CLEAR_BLUE = (52, 122, 235, 85)
@@ -36,6 +39,8 @@ YELLOW = (255, 223, 0)
 ORANGE = (255, 165, 0)
 TEAL = (3, 244, 252)
 RED = (255,0,0)
+
+#FONT SIZES
 FONT_SIZE = 40
 SMALL_FONT_SIZE = 30
 SUPER_SMALL_FONT = 20
@@ -50,37 +55,42 @@ fps = 60
 fpsClock = pygame.time.Clock()
 
 
-#game variables
+#Font variables
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Battle Ship")
 menu_font = pygame.font.SysFont("skia", 32)
 title_font = pygame.font.SysFont("skia", 72, bold=True)
 plain_font = pygame.font.SysFont("skia", FONT_SIZE, bold=True)
 smaller_plain_font = pygame.font.SysFont("skia", SMALL_FONT_SIZE, bold=True)
-super_small_text = pygame.font.SysFont("skia", SUPER_SMALL_FONT, bold=True)
-main_menu = False
+super_small_font = pygame.font.SysFont("skia", SUPER_SMALL_FONT, bold=True)
+
+# Game Variables
+main_menu = True
+game_over = False
+game_progress = "Ready"
 ocean = pygame.image.load("assets/Ocean-Background.jpg")
 resize_ocean = pygame.transform.scale(ocean, (GRID_WIDTH, GRID_HEIGHT))
-player_grid = resize_ocean
-enemy_grid = resize_ocean
+player_ocean = resize_ocean
+enemy_ocean = resize_ocean
 last_hit_message = ""
-game_over = False
 player_turn = "Player"
 ship_direction = 0
 
 #Music and effects
+pirates_music = mixer.music.load("./assets/Pirates.mp3")
 splash_sound = mixer.Sound("./assets/cannon_miss.ogg")
 sinking_ship_sound = mixer.Sound("./assets/full-explosion.wav")
 plane_missile_sound = mixer.Sound("./assets/missile-sound.wav")
 plane_flying_sound = mixer.Sound("./assets/missile-sound.wav")
 enemy_small_explostion_sound = mixer.Sound("./assets/Small-Explostion.wav")
 enemy_plane_sound = mixer.Sound("./assets/Plane-Flyby.wav")
+sonar_sound = mixer.Sound("./assets/Sonar.wav")
 sound_arr = []
 
 
 
 # ships_info = [('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 5), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 3), ("assets/SHIPS/ShipRescue.png", "Rescue", 4), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3)]
-ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 5), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipRescue.png", "Rescue", 4),  ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
+ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 5), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipRescue.png", "Rescue", 4),  ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
 # ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4),('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
 
 
@@ -109,6 +119,11 @@ explosion_imgs = pygame.image.load("./assets/Single_explosion.png").convert_alph
 explosions_group = pygame.sprite.Group()
 ships_left = 8
 enemy_ships_left = 8
+enemy_ship_updates = []
+player_ship_updates = []
+
+
+
 
 
 class Explosion(pygame.sprite.Sprite):
@@ -226,12 +241,19 @@ class Ship(pygame.sprite.Sprite):
         if direction == "RIGHT":
             self.rect.x += FULL_CELL_SIZE
         
-        print(f'{self.title} was moved {direction}')      
+        print(f'{self.title} was moved {direction}')     
+        
+    # def update_section_coords(self):
+    #     top = self.rect.topleft
+    #     bottom = self.rect.midbottom
+        
 
 
 def check_enemy_hit(target):
     global sinking_ship_sound
     global ships_left
+    global enemy_ship_updates
+    
     for ship in loaded_ships:
         # print(ship.rect.top)
         # print(ship.rect.bottom)
@@ -243,9 +265,13 @@ def check_enemy_hit(target):
             ship.hits -= 1
             sound_arr.append(plane_flying_sound)
             target.hit = True
+            status_txt = f"{ship.title} was hit at column {target.coord[0] + 1} , row {target.coord[1] + 1}"
+            enemy_ship_updates.append((ship.image, status_txt, ship.angle))
+            
             if ship.hits == 0:
                 ship.exploded = True
-                # sinking_ship_sound.play()
+                status_txt = f"{ship.title} was sunk!!!"
+                enemy_ship_updates.append((ship.image, status_txt, ship.angle))
                 sound_arr.append(sinking_ship_sound)
                 ships_left -= 1
             return True
@@ -261,7 +287,8 @@ def enemy_choose_target():
     
     
     possible_hits = [box for box in enemy_target_boxes if box not in enemy_hit_boxes]
-    if game_over == False:
+    if game_over == False or len(possible_hits) != 1:
+        print(len(possible_hits))
         rand_box = random.choice(possible_hits)
         if rand_box not in enemy_hit_boxes:
             enemy_hit_boxes.append(rand_box)
@@ -302,27 +329,33 @@ def check_box_ship_collision(target, ships_group, mouse_pos):
     global sinking_ship_sound
     global enemy_ships_left
     global player_turn
+    global hit_boxes
     collide = False
     for ship in ships_group:
-        if ship.rect.collidepoint(mouse_pos) and target.clicked == False:
+        # if ship.rect.collidepoint(mouse_pos) and target.clicked == False:
+        if ship.rect.collidepoint(target.box.center) and target.clicked == False:
+            status_txt = f"{ship.title} was hit at column {target.coord[0] + 1} , row {target.coord[1] + 1}"
+            player_ship_updates.append((ship.image, status_txt, ship.angle))
             player_turn = "Player"
             target.hit = True
             if ship.exploded == False and target not in hit_boxes:
                 ship.hits-= 1
                 print(f'{ship.title}: {ship.hits} left')
                 sound_arr.append(plane_flying_sound)
+                new_exp = Explosion(explosion_imgs, target.box.center, CELL_SIZE, CELL_SIZE)
+                explosions_group.add(new_exp)
             if ship.hits == 0 and ship.exploded == False:
                 enemy_ships_left -= 1
-                # sinking_ship_sound.play()
                 sound_arr.append(sinking_ship_sound)
+                status_txt = f"{ship.title} has exploded!!!"
+                player_ship_updates.append((ship.image, status_txt, ship.angle))
                 print(f'{ship.title} has exploded')
                 print(f'{enemy_ships_left} ships left')
                 ship.exploded = True
+                #Need to add function to remove all target boxes red background that collide with ship
             collide = True
         else:
-            player_turn = "Enemy"
-        # print(player_turn)
-        # print(collide)  
+            player_turn = "Enemy" 
         missile_sound(collide)
 
 
@@ -374,16 +407,19 @@ class TargetBox():
 
     
     def checkClicked(self):
+        global player_turn
+        
         if player_turn == "Player":
             mouse_pos = pygame.mouse.get_pos()
-            mouse_click = pygame.mouse.get_pressed()
+            mouse_click = pygame.mouse.get_pressed()    
             if self.box.collidepoint(mouse_pos):
                 if mouse_click[0] == 1 and self.clicked == False:
                     check_box_ship_collision(self, enemy_ships, mouse_pos)
                     self.clicked = True
                     return True
             if mouse_click[0] == 0:
-                self.clicked = False
+                # self.clicked = False
+                return False
             
 
 
@@ -532,10 +568,11 @@ class Button:
         mouse_pos = pygame.mouse.get_pos()
         mouse_click = pygame.mouse.get_pressed()
         if self.button.collidepoint(mouse_pos):
-            self.display_color = self.hover_color
+            self.color = self.hover_color
             if mouse_click[0] == 1 and self.clicked == False:
+                sonar_sound.play()
                 self.clicked = True
-                self.update_color()
+                # self.update_color()
                 return True
         if mouse_click[0] == 0:
             self.display_color = self.color
@@ -565,19 +602,150 @@ display_ship = pygame.transform.scale(display_ship, (display_ship_width,CELL_SIZ
 def check_game_over():
     global main_menu
     global game_over
+    global game_progress
     global enemy_ships_left
+    
+    
     if enemy_ships_left == 0:
         game_over = True
+        game_progress = "Game Over"
         
     if ships_left == 0:
         game_over = True
-
-
-
-
+        game_progress = "Game Over"
+        
+        
+def draw_ship_status(type):
+    global enemy_ship_updates
+    global player_ship_updates
+    
+    if type == "Enemy":
+        status_arr = enemy_ship_updates
+        status_color = RED
+    else:
+        status_arr = player_ship_updates
+        status_color = GREEN
+        
+    for index, status in enumerate(status_arr):
+        SPACE = 40
+        first_row = GRID_BOTTOM + SPACE
+        second_row = first_row + SPACE
+        third_row = second_row + SPACE
+        fourth_row = third_row + SPACE
+        fifth_row = fourth_row + SPACE
+        
+        status_text = super_small_font.render(f'{status[1]}', True, status_color)
+        
+        if type == "Enemy":
+            column = GRID_LEFT + GRID_WIDTH//2 - 20
+            img_column = column - 100
+        if type == "Player":
+            column = ENEMY_GRID_LEFT
+            img_column = column + status_text.get_width() + 5
 
 
         
+        if index > 4:
+            status_arr.pop(0)
+        
+        #Adjust status ship image
+        
+        
+        if status[2] == 0 or status[2] == 180:
+            old_hit_ship = pygame.transform.rotate(status[0], 270)
+        else:
+            old_hit_ship = status[0]
+            
+        hit_ship = pygame.transform.scale(old_hit_ship, (70,30))
+        
+        # print(status)
+        if index == 0 and len(status_arr) > 0:
+            screen.blit(status_text, (column, first_row))
+            screen.blit(hit_ship, (img_column, first_row))
+        elif index == 1 and len(status_arr) > 0:
+            status_text = super_small_font.render(f'{status[1]}', True, status_color)
+            screen.blit(status_text, (column, second_row))
+            screen.blit(hit_ship, (img_column, second_row))
+        elif index == 2 and len(status_arr) > 0:
+            status_text = super_small_font.render(f'{status[1]}', True, status_color)
+            screen.blit(status_text, (column, third_row))
+            screen.blit(hit_ship, (img_column, third_row))
+        elif index == 3 and len(status_arr) > 0:
+            status_text = super_small_font.render(f'{status[1]}', True, status_color)
+            screen.blit(status_text, (column, fourth_row))
+            screen.blit(hit_ship, (img_column, fourth_row))
+        elif index == 4 and len(status_arr) > 0:
+            status_text = super_small_font.render(f'{status[1]}', True, status_color)
+            screen.blit(status_text, (column, fifth_row))
+            screen.blit(hit_ship, (img_column, fifth_row))
+        
+            
+
+
+def shuffle_ships(type):
+    loaded_ships.empty()
+    load_ships(type)
+    check_ship_to_ship_collision(type)
+            
+
+
+def start_game():
+    global user_ship_coord
+    global ships_left
+    global enemy_ships_left
+    global player_ship_updates
+    global enemy_ship_updates
+    global player_turn
+    global game_over
+    global game_progress
+    
+    # Reset Target boxes for both players and users
+    for index, target in enumerate(player_target_boxes):
+        target.hit = False
+        target.clicked = False
+        enemy_target_boxes[index].hit = False
+        enemy_target_boxes[index].clicked = False
+        
+    
+    
+    # Clear Groups
+    hit_boxes.clear()
+    enemy_hit_boxes.clear()
+    explosions_group.empty()
+    enemy_ships.empty()
+    loaded_ships.empty()
+    ships_left = 8
+    enemy_ships_left = 8
+    enemy_ship_updates.clear()
+    player_ship_updates.clear()
+    user_ship_coord.clear()
+    
+    shuffle_ships("Enemy")
+    shuffle_ships("Player")
+    
+    # load_ships("Enemy")
+    # load_ships("Player")
+    
+    # Move loaded ships that have collided and give them their own space on the grid
+    # check_ship_to_ship_collision("Player")
+    # check_ship_to_ship_collision("Enemy")
+    
+    game_over = False
+    game_progress = "Ready"
+    player_turn = "Player"
+    
+
+def draw_scoreboard():
+    pass
+    
+        
+
+
+
+
+
+
+pygame.mixer.music.play(-1)
  
 # Game loop.
 while True:
@@ -585,19 +753,47 @@ while True:
   
     if main_menu:
         # screen.fill(BLUE)
-        menu_x = SCREEN_WIDTH//4 + 170//2
+        menu_x = SCREEN_WIDTH//2 + 175//2
         menu_y = SCREEN_HEIGHT//2
         new_game = Button("New Game", GREEN, (menu_x, menu_y), 175, 50)
-        new_game.draw()
+        
+        
+        if game_progress != "Ready" or game_progress != "Game Over":
+            new_game.draw()
+            if new_game.checkClicked():
+                main_menu = False
+                game_progress = "Ready"
     
-    else:
-        screen.fill(BLACK)
-        screen.blit(player_grid, (SIDE_INDENT,SIDE_INDENT))
-        screen.blit(enemy_grid, (SCREEN_WIDTH - (GRID_WIDTH + SIDE_INDENT),SIDE_INDENT))
+    if (game_progress == "Ready" or game_progress == "Fight") and main_menu == False:
+        #Draw GRID
+        screen.fill(DARK_BLUE)
+        screen.blit(player_ocean, (SIDE_INDENT,TOP_INDENT))
+        screen.blit(enemy_ocean, (SCREEN_WIDTH - (GRID_WIDTH + SIDE_INDENT),TOP_INDENT))
+        
+        width = 250
+        height = 50
+        menu_x = SCREEN_WIDTH//2 - width//2
+        menu_y = SCREEN_HEIGHT//2   
+        if game_progress == "Ready":    
+            shuffle_button = Button("SHUFFLE SHIPS", GREEN, (menu_x, menu_y - height - 100), width, 50)
+            shuffle_button.draw()
+
+        
+        if shuffle_button.checkClicked() and game_progress == "Ready":
+            shuffle_ships("Player")
+        
+        if game_progress == "Ready":
+            fight_button = Button("FIGHT", GREEN, (menu_x, menu_y - height - 20), width, 50)
+            fight_button.draw()
+        
+        if fight_button.checkClicked() and game_progress == "Ready":
+            game_progress = "Fight"
         
         
         #Draw Enemy ships first so that they are hidden under tarets boxes
         enemy_ships.draw(screen)
+        
+        
                 
     #Draw boxes that are not hit
         #Enemy boxes that the player is targeting
@@ -607,7 +803,7 @@ while True:
                 target.draw()
             if target.coord in hit_boxes_coords and target.hit == True:
                 target.draw_hit()
-            if (target.checkClicked() and game_over == False):
+            if (target.checkClicked() and (game_over == False and game_progress == "Fight")):
                 hit_boxes.append(target)
                 
         
@@ -628,64 +824,80 @@ while True:
                 screen.blit(ship.image, ship.rect)
                 check_game_over()
         
-        if player_turn == "Enemy":
+        if player_turn == "Enemy" and (game_over == False and game_progress == "Fight"):
             enemy_choose_target()
 
         
         
-            
-        # Draw display ship to show the player which ship is being moved
-        screen.blit(display_ship, (SCREEN_WIDTH//2 - (display_ship.get_width()//2), SCREEN_HEIGHT//3))
         
-        ship_text = smaller_plain_font.render(display_ship_title, True, GREEN)
-        screen.blit(ship_text, (SCREEN_WIDTH//2 - (ship_text.get_width()//2), 200))
-        
-        #Draw Game Over
-    
-        lose_txt = "You Lost!!"
-        win_txt = "You Won!!"
-            
-        
-        if game_over and ships_left == 0:
-            game_status_surf = smaller_plain_font.render(lose_txt, True, GREEN)
-            screen.blit(game_status_surf, (SCREEN_WIDTH//2 - (game_status_surf.get_width()//2), 100))
-        elif game_over and enemy_ships_left == 0:
-            game_status_surf = smaller_plain_font.render(win_txt, True, GREEN)
-            screen.blit(game_status_surf, (SCREEN_WIDTH//2 - (game_status_surf.get_width()//2), 100))
-            
-        #Draw whose turn
-        if player_turn == "Enemy":
-            player_turn_txt = "ENEMY"
-        elif player_turn == "Player":
-            player_turn_txt = "YOUR"
-        else:
-            player_turn_txt = ""
-        
-        full_player_turn = f'{player_turn} TURN'
-        
-        
-        turn_text = smaller_plain_font.render(player_turn, True, PURPLE, WHITE)
-        screen.blit(turn_text, (SCREEN_WIDTH//2 - (turn_text.get_width()//2), 500))
-        
-        
-        ships_left_text = smaller_plain_font.render(f'{ships_left} ships left', True, BLUE)
-        screen.blit(ships_left_text, (SCREEN_WIDTH//2 - (ships_left_text.get_width()//2), 600))
 
-        enemy_ships_left_text = smaller_plain_font.render(f'{enemy_ships_left} Enemy ships left', True, BLUE)
-        screen.blit(enemy_ships_left_text, (SCREEN_WIDTH//2 - (enemy_ships_left_text.get_width()//2), 700))
+            
+        
+        if game_over:
+            #Draw Game Over
+            lose_txt = "DEFEATED!!"
+            win_txt = "VICTORY!!"
+            
+        
+            if ships_left == 0:
+                game_status_surf = smaller_plain_font.render(lose_txt, True, RED)
+                screen.blit(game_status_surf, (SCREEN_WIDTH//2 - (game_status_surf.get_width()//2), 100))
+            if enemy_ships_left == 0:
+                game_status_surf = smaller_plain_font.render(win_txt, True, GREEN)
+                screen.blit(game_status_surf, (SCREEN_WIDTH//2 - (game_status_surf.get_width()//2), 100))
+            
+            width = 175
+            menu_x = SCREEN_WIDTH//2 - width//2
+            menu_y = SCREEN_HEIGHT//2 - 50
+            restart_game = Button("RESTART", GREEN, (menu_x, menu_y), width, 50)
+            restart_game.draw()
+            
+            if restart_game.checkClicked():
+                start_game()
+            
+        
+        
+        # Draw how many ships are left for both sides
+        enemy_ships_left_text = smaller_plain_font.render(f'Enemy Ships Left', True, BLUE)
+        enemy_text_coord = (ENEMY_GRID_RIGHT - enemy_ships_left_text.get_width()//2, GRID_BOTTOM + 40)
+        screen.blit(enemy_ships_left_text, enemy_text_coord)
+        pygame.draw.line(screen, BLUE, (ENEMY_GRID_RIGHT - enemy_ships_left_text.get_width()//2, GRID_BOTTOM + 40 + enemy_ships_left_text.get_height()), (ENEMY_GRID_RIGHT + enemy_ships_left_text.get_width()//2, GRID_BOTTOM + 40 + enemy_ships_left_text.get_height()) )
+
+        enemy_left_num = smaller_plain_font.render(str(enemy_ships_left), True, RED)
+        screen.blit(enemy_left_num, (enemy_text_coord[0] + enemy_ships_left_text.get_width()//2, enemy_text_coord[1] + enemy_ships_left_text.get_height() ))
+
+
+        player_ships_left_text = smaller_plain_font.render(f'Player Ships Left', True, BLUE)
+        player_text_coord = (GRID_LEFT - player_ships_left_text.get_width()//2, GRID_BOTTOM + 40)
+        screen.blit(player_ships_left_text, player_text_coord)
+        pygame.draw.line(screen, BLUE, (GRID_LEFT - player_ships_left_text.get_width()//2, GRID_BOTTOM + 40 + player_ships_left_text.get_height()), (GRID_LEFT + player_ships_left_text.get_width()//2, GRID_BOTTOM + 40 + player_ships_left_text.get_height()) )
+
+        player_left_num = smaller_plain_font.render(str(ships_left), True, GREEN)
+        screen.blit(player_left_num, (player_text_coord[0] + player_ships_left_text.get_width()//2, enemy_text_coord[1] + player_ships_left_text.get_height() ))
         
         
         
         
+        #Draw Player ships on top of the grid so that the player can see them
         loaded_ships.draw(screen)
+        explosions_group.draw(screen)
         
+        
+        #Play sounds in array
         for s in sound_arr:
             s.play()
             # pygame.time.wait(500)
             sound_arr.pop(0)
         
         
-        explosions_group.draw(screen)
+        
+        # Draw Ship Status Text for every hit and explosion
+        draw_ship_status("Enemy")
+        draw_ship_status("Player")
+
+                
+                
+                
 
             
 
@@ -699,9 +911,7 @@ while True:
             sys.exit()
             
   
-  # Update.
-  
-  # Draw.
-  
+
+    # Update  
     pygame.display.update()
     fpsClock.tick(fps)
