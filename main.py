@@ -69,6 +69,7 @@ main_menu = True
 game_over = False
 game_progress = "Ready"
 ocean = pygame.image.load("assets/Ocean-Background.jpg")
+main_menu_ocean = pygame.transform.scale(ocean, (SCREEN_WIDTH, SCREEN_HEIGHT))
 resize_ocean = pygame.transform.scale(ocean, (GRID_WIDTH, GRID_HEIGHT))
 player_ocean = resize_ocean
 enemy_ocean = resize_ocean
@@ -572,6 +573,7 @@ class Button:
             if mouse_click[0] == 1 and self.clicked == False:
                 sonar_sound.play()
                 self.clicked = True
+                print("I have been clicked")
                 # self.update_color()
                 return True
         if mouse_click[0] == 0:
@@ -731,7 +733,7 @@ def start_game():
     # check_ship_to_ship_collision("Enemy")
     
     game_over = False
-    game_progress = "Ready"
+    # game_progress = "Ready"
     player_turn = "Player"
     
 
@@ -752,8 +754,9 @@ while True:
     
   
     if main_menu:
-        # screen.fill(BLUE)
-        menu_x = SCREEN_WIDTH//2 + 175//2
+        screen.fill(BLUE)
+        screen.blit(main_menu_ocean, (0,0))
+        menu_x = SCREEN_WIDTH//2 - 175//2
         menu_y = SCREEN_HEIGHT//2
         new_game = Button("New Game", GREEN, (menu_x, menu_y), 175, 50)
         
@@ -773,7 +776,7 @@ while True:
         width = 250
         height = 50
         menu_x = SCREEN_WIDTH//2 - width//2
-        menu_y = SCREEN_HEIGHT//2   
+        menu_y = SCREEN_HEIGHT//2
         if game_progress == "Ready":    
             shuffle_button = Button("SHUFFLE SHIPS", GREEN, (menu_x, menu_y - height - 100), width, 50)
             shuffle_button.draw()
@@ -848,11 +851,12 @@ while True:
             
             width = 175
             menu_x = SCREEN_WIDTH//2 - width//2
-            menu_y = SCREEN_HEIGHT//2 - 50
+            menu_y = SCREEN_HEIGHT//2 - 250
             restart_game = Button("RESTART", GREEN, (menu_x, menu_y), width, 50)
             restart_game.draw()
             
             if restart_game.checkClicked():
+                print("Restarting....")
                 start_game()
             
         
