@@ -67,7 +67,7 @@ super_small_font = pygame.font.SysFont("skia", SUPER_SMALL_FONT, bold=True)
 # Game Variables
 main_menu = True
 game_over = False
-game_progress = "Ready"
+game_progress = "Menu"
 ocean = pygame.image.load("assets/Ocean-Background.jpg")
 main_menu_ocean = pygame.transform.scale(ocean, (SCREEN_WIDTH, SCREEN_HEIGHT))
 resize_ocean = pygame.transform.scale(ocean, (GRID_WIDTH, GRID_HEIGHT))
@@ -409,8 +409,9 @@ class TargetBox():
     
     def checkClicked(self):
         global player_turn
+        global game_progress
         
-        if player_turn == "Player":
+        if player_turn == "Player" and game_progress == "Fight":
             mouse_pos = pygame.mouse.get_pos()
             mouse_click = pygame.mouse.get_pressed()    
             if self.box.collidepoint(mouse_pos):
@@ -685,7 +686,10 @@ def draw_ship_status(type):
 
 
 def shuffle_ships(type):
-    loaded_ships.empty()
+    if type == "Enemy":
+        enemy_ships.empty()
+    if type == "Player":
+        loaded_ships.empty() 
     load_ships(type)
     check_ship_to_ship_collision(type)
             
@@ -714,8 +718,8 @@ def start_game():
     hit_boxes.clear()
     enemy_hit_boxes.clear()
     explosions_group.empty()
-    enemy_ships.empty()
-    loaded_ships.empty()
+    # enemy_ships.empty()
+    # loaded_ships.empty()
     ships_left = 8
     enemy_ships_left = 8
     enemy_ship_updates.clear()
@@ -725,15 +729,8 @@ def start_game():
     shuffle_ships("Enemy")
     shuffle_ships("Player")
     
-    # load_ships("Enemy")
-    # load_ships("Player")
-    
-    # Move loaded ships that have collided and give them their own space on the grid
-    # check_ship_to_ship_collision("Player")
-    # check_ship_to_ship_collision("Enemy")
-    
     game_over = False
-    # game_progress = "Ready"
+    game_progress = "Set Board"
     player_turn = "Player"
     
 
@@ -761,13 +758,13 @@ while True:
         new_game = Button("New Game", GREEN, (menu_x, menu_y), 175, 50)
         
         
-        if game_progress != "Ready" or game_progress != "Game Over":
+        if game_progress == "Menu":
             new_game.draw()
-            if new_game.checkClicked():
+            if new_game.checkClicked() and game_progress == "Menu":
                 main_menu = False
-                game_progress = "Ready"
+                game_progress = "Set Board"
     
-    if (game_progress == "Ready" or game_progress == "Fight") and main_menu == False:
+    if (game_progress == "Set Board" or game_progress == "Fight") and main_menu == False:
         #Draw GRID
         screen.fill(DARK_BLUE)
         screen.blit(player_ocean, (SIDE_INDENT,TOP_INDENT))
@@ -777,22 +774,19 @@ while True:
         height = 50
         menu_x = SCREEN_WIDTH//2 - width//2
         menu_y = SCREEN_HEIGHT//2
-        if game_progress == "Ready":    
+        if game_progress == "Set Board":    
             shuffle_button = Button("SHUFFLE SHIPS", GREEN, (menu_x, menu_y - height - 100), width, 50)
             shuffle_button.draw()
-
-        
-        if shuffle_button.checkClicked() and game_progress == "Ready":
-            shuffle_ships("Player")
-        
-        if game_progress == "Ready":
             fight_button = Button("FIGHT", GREEN, (menu_x, menu_y - height - 20), width, 50)
             fight_button.draw()
-        
-        if fight_button.checkClicked() and game_progress == "Ready":
-            game_progress = "Fight"
-        
-        
+            
+            if shuffle_button.checkClicked():
+                shuffle_ships("Player")
+                
+            if fight_button.checkClicked():
+                game_progress = "Fight"
+
+
         #Draw Enemy ships first so that they are hidden under tarets boxes
         enemy_ships.draw(screen)
         
@@ -849,15 +843,8 @@ while True:
                 game_status_surf = smaller_plain_font.render(win_txt, True, GREEN)
                 screen.blit(game_status_surf, (SCREEN_WIDTH//2 - (game_status_surf.get_width()//2), 100))
             
-            width = 175
-            menu_x = SCREEN_WIDTH//2 - width//2
-            menu_y = SCREEN_HEIGHT//2 - 250
-            restart_game = Button("RESTART", GREEN, (menu_x, menu_y), width, 50)
-            restart_game.draw()
+
             
-            if restart_game.checkClicked():
-                print("Restarting....")
-                start_game()
             
         
         
@@ -900,9 +887,17 @@ while True:
         draw_ship_status("Player")
 
                 
-                
-                
-
+    if game_over and game_progress == "Game Over":
+        width = 175
+        menu_x = SCREEN_WIDTH//2 - width//2
+        menu_y = 100            
+                    
+        restart_game = Button("RESTART", GREEN, (menu_x, menu_y), width, 50)
+        restart_game.draw()
+        
+        if restart_game.checkClicked():
+            print("Restarting....")
+            start_game()
             
 
     
