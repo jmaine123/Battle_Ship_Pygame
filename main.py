@@ -53,6 +53,7 @@ MAIN_MENU_BTN_HEIGHT = 50
  
 fps = 60
 fpsClock = pygame.time.Clock()
+turnClock = pygame.time.Clock()
 
 
 #Font variables
@@ -61,6 +62,7 @@ pygame.display.set_caption("Battle Ship")
 menu_font = pygame.font.SysFont("skia", 32)
 title_font = pygame.font.SysFont("skia", 72, bold=True)
 plain_font = pygame.font.SysFont("skia", FONT_SIZE, bold=True)
+game_font = pygame.font.SysFont("skia", 22)
 smaller_plain_font = pygame.font.SysFont("skia", SMALL_FONT_SIZE, bold=True)
 super_small_font = pygame.font.SysFont("skia", SUPER_SMALL_FONT, bold=True)
 
@@ -76,6 +78,7 @@ enemy_ocean = resize_ocean
 last_hit_message = ""
 player_turn = "Player"
 ship_direction = 0
+turn_timer = 0
 
 #Music and effects
 pirates_music = mixer.music.load("./assets/Pirates.mp3")
@@ -89,20 +92,18 @@ sonar_sound = mixer.Sound("./assets/Sonar.wav")
 sound_arr = []
 
 
-
-# ships_info = [('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1), ("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 5), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 3), ("assets/SHIPS/ShipRescue.png", "Rescue", 4), ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3)]
-ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 5), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipRescue.png", "Rescue", 4),  ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipPatrolHull.png", "PatrolHull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
-# ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "BattleShip", 4),('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
+#Ship tuples with ship information and image path (path, title, length)
+ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "Battleship", 5), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipRescue.png", "Rescue", 4),  ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipPatrolHull.png", "Patrol Hull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
 
 
 
-starting_enemy_ship_locs = []
-all_ships = []
-display_index = 0
-display_ship_path = ships_info[display_index][0]
-display_ship_title = ships_info[display_index][1]
+
+# starting_enemy_ship_locs = []
+# all_ships = []
 
 
+
+#Variables to draw grid
 cols = []
 enemy_cols = []
 rows = []
@@ -118,10 +119,50 @@ loaded_ships = pygame.sprite.Group()
 enemy_ships = pygame.sprite.Group()
 explosion_imgs = pygame.image.load("./assets/Single_explosion.png").convert_alpha()
 explosions_group = pygame.sprite.Group()
+menu_larges_ship_img = pygame.image.load("./assets/shipz ripples/images/ship_large_body.png").convert_alpha()
+menu_small_ship_img = pygame.image.load("./assets/shipz ripples/images/ship_medium_body_b.png").convert_alpha()
+ripple_img = pygame.image.load("./assets/shipz ripples/images/water_ripple_big_000.png").convert_alpha()
+small_ripple_img = pygame.image.load("./assets/shipz ripples/images/water_ripple_small_004.png").convert_alpha()
+menu_ships = pygame.sprite.Group()
 ships_left = 8
 enemy_ships_left = 8
 enemy_ship_updates = []
 player_ship_updates = []
+
+
+
+class MenuShip(pygame.sprite.Sprite):
+    def __init__(self, image, ripple_img, pos, width, height, angle, txt, font, direction):
+        pygame.sprite.Sprite.__init__(self)
+        self.width = width
+        self.height = height
+        self.font = font
+        self.txt = self.font.render(txt, True, TEAL, None)
+        self.txt_surf = self.txt.get_rect()
+        self.pos = pos
+        self.rotated_image = pygame.transform.rotate(image, angle)
+        self.image = pygame.transform.scale(self.rotated_image, (width, height))
+        self.ripple_rotated = pygame.transform.rotate(ripple_img, angle)
+        self.ripple = pygame.transform.scale(self.ripple_rotated, (width, height + self.height//15))
+        self.rect = self.image.get_rect()
+        self.rect.center = self.pos
+        self.ripple_rect = self.ripple.get_rect()
+        self.ripple_rect.center = self.rect.topleft
+        self.txt_surf.center = self.rect.center
+        self.direction = direction
+    
+    def draw_ripples(self):
+        screen.blit(self.ripple, (self.rect.left + self.width//25, self.rect.top))
+        # screen.blit(self.ripple, self.ripple_rect.center)
+    
+    def draw_text(self):
+        screen.blit(self.txt, (self.rect.centerx - self.txt.get_width()//2, self.rect.centery - self.txt.get_height()//2 ))
+    
+    def update_features(self):
+        self.txt_surf.center = self.rect.center
+        
+        
+           
 
 
 
@@ -262,7 +303,7 @@ def check_enemy_hit(target):
         # print(ship.rect.right)
         
         if ship.rect.colliderect(target.box):
-            print("Enemey HIT!!!")
+            # print("Enemey HIT!!!")
             ship.hits -= 1
             sound_arr.append(plane_flying_sound)
             target.hit = True
@@ -284,12 +325,12 @@ def enemy_choose_target():
     global plane_missile_sound
     global enemy_hit_boxes
     global player_turn
+    global turn_timer
     
     
     
     possible_hits = [box for box in enemy_target_boxes if box not in enemy_hit_boxes]
-    if game_over == False or len(possible_hits) != 1:
-        print(len(possible_hits))
+    if (game_over == False or len(possible_hits) != 1 ) and len(possible_hits)!= 0:
         rand_box = random.choice(possible_hits)
         if rand_box not in enemy_hit_boxes:
             enemy_hit_boxes.append(rand_box)
@@ -297,7 +338,6 @@ def enemy_choose_target():
             if check_enemy_hit(rand_box):
                 sound_arr.append(enemy_small_explostion_sound)
                 new_exp = Explosion(explosion_imgs, rand_box.box.center, rand_box.width, rand_box.height)
-                # print(rand_box.pos)
                 explosions_group.add(new_exp)
                 player_turn = "Enemy"
                 enemy_choose_target()
@@ -312,14 +352,12 @@ def missile_sound(collide):
     global plane_missile_sound
     global splash_sound
     global player_turn
-    # plane_missile_sound.play(fade_ms=3000)
+
     if collide:
         player_turn = "Player"
     elif collide == False:
         player_turn = "Enemy"
-        # splash_sound.play()
-        
-        # print("hit!!!")
+
         
         
     
@@ -331,9 +369,9 @@ def check_box_ship_collision(target, ships_group, mouse_pos):
     global enemy_ships_left
     global player_turn
     global hit_boxes
+    global turn_timer
     collide = False
     for ship in ships_group:
-        # if ship.rect.collidepoint(mouse_pos) and target.clicked == False:
         if ship.rect.collidepoint(target.box.center) and target.clicked == False:
             status_txt = f"{ship.title} was hit at column {target.coord[0] + 1} , row {target.coord[1] + 1}"
             player_ship_updates.append((ship.image, status_txt, ship.angle))
@@ -356,6 +394,7 @@ def check_box_ship_collision(target, ships_group, mouse_pos):
                 #Need to add function to remove all target boxes red background that collide with ship
             collide = True
         else:
+            turn_timer = pygame.time.get_ticks()
             player_turn = "Enemy" 
         missile_sound(collide)
 
@@ -545,15 +584,16 @@ check_ship_to_ship_collision("Enemy")
 
 
 class Button:
-    def __init__(self, txt, color, pos, width, height):
+    def __init__(self, txt, font, color, pos):
         self.text = txt
-        self.text_surf = menu_font.render(self.text, True, PURPLE)
+        self.button_font = font
+        self.text_surf = self.button_font.render(self.text, True, PURPLE)
         self.color = color
         self.display_color = self.color
         self.hover_color = WHITE
         self.pos = pos
-        self.height = height
-        self.width = width
+        self.height = self.text_surf.get_height() + 20
+        self.width = self.text_surf.get_width() + 20
         self.button = pygame.rect.Rect(self.pos[0], self.pos[1], self.width, self.height)
         self.text_rect = self.text_surf.get_rect(center = self.button.center)
         self.border_rect = pygame.rect.Rect(self.pos[0] - 2, self.pos[1] - 2, self.width + 4, self.height + 4)
@@ -574,7 +614,7 @@ class Button:
             if mouse_click[0] == 1 and self.clicked == False:
                 sonar_sound.play()
                 self.clicked = True
-                print("I have been clicked")
+                # print("I have been clicked")
                 # self.update_color()
                 return True
         if mouse_click[0] == 0:
@@ -587,17 +627,6 @@ class Button:
         
 
 
-
-# Load and scale display ship
-display_ship_img = pygame.image.load(display_ship_path)
-display_ship = pygame.transform.rotate(display_ship_img, 90)
-
-if ships_info[display_index][2] > 2:
-    display_ship_width = 200
-else:
-    display_ship_width = 100
-
-display_ship = pygame.transform.scale(display_ship, (display_ship_width,CELL_SIZE))
 
 
 
@@ -661,7 +690,6 @@ def draw_ship_status(type):
             
         hit_ship = pygame.transform.scale(old_hit_ship, (70,30))
         
-        # print(status)
         if index == 0 and len(status_arr) > 0:
             screen.blit(status_text, (column, first_row))
             screen.blit(hit_ship, (img_column, first_row))
@@ -737,8 +765,37 @@ def start_game():
 def draw_scoreboard():
     pass
     
-        
+main_ship = MenuShip(menu_larges_ship_img, ripple_img, (-100,200), 900, 300, 270, "BATTLESHIP", title_font, "RIGHT")
+menu_ships.add(main_ship)
 
+created_by_ship = MenuShip(menu_small_ship_img, small_ripple_img, (SCREEN_WIDTH + 700,600), 250, 100, 90, "CREATED BY", menu_font, "LEFT")
+menu_ships.add(created_by_ship)
+
+name_ship = MenuShip(menu_small_ship_img, ripple_img, (SCREEN_WIDTH + 700,700), 450, 100, 270, "JERMAINE SMIKLE", menu_font, "RIGHT")
+menu_ships.add(name_ship)
+
+def update_menu_ships():
+    for ship in menu_ships:
+        if ship.direction == "RIGHT":
+            ship.rect.x +=1
+            ship.draw_ripples()
+            ship.update_features()
+            
+            if ship.rect.left > SCREEN_WIDTH:
+                ship.rect.x = - (ship.width) - 200
+        if ship.direction == "LEFT":
+            ship.rect.x -=2
+            ship.draw_ripples()
+            ship.update_features()
+            
+            if ship.rect.right < 0:
+                ship.rect.x = SCREEN_WIDTH + 700
+
+
+def draw_menu_ship_text():
+    for ship in menu_ships:
+        ship.draw_text()
+             
 
 
 
@@ -751,11 +808,20 @@ while True:
     
   
     if main_menu:
-        screen.fill(BLUE)
+        # screen.fill(BLUE)
         screen.blit(main_menu_ocean, (0,0))
         menu_x = SCREEN_WIDTH//2 - 175//2
         menu_y = SCREEN_HEIGHT//2
-        new_game = Button("New Game", GREEN, (menu_x, menu_y), 175, 50)
+        new_game = Button("New Game", menu_font, GREEN, (menu_x, menu_y))
+        
+        
+            
+        update_menu_ships()
+        menu_ships.draw(screen)
+        draw_menu_ship_text()
+        
+
+
         
         
         if game_progress == "Menu":
@@ -763,6 +829,9 @@ while True:
             if new_game.checkClicked() and game_progress == "Menu":
                 main_menu = False
                 game_progress = "Set Board"
+                
+                
+                
     
     if (game_progress == "Set Board" or game_progress == "Fight") and main_menu == False:
         #Draw GRID
@@ -774,10 +843,19 @@ while True:
         height = 50
         menu_x = SCREEN_WIDTH//2 - width//2
         menu_y = SCREEN_HEIGHT//2
+        center = SCREEN_WIDTH//2
         if game_progress == "Set Board":    
-            shuffle_button = Button("SHUFFLE SHIPS", GREEN, (menu_x, menu_y - height - 100), width, 50)
+            shuffle_button = Button("SHUFFLE SHIPS", game_font, CLEAR_BLUE, (center, menu_y - height - 100))
+            shuffle_button.button.centerx = center
+            shuffle_button.text_rect.centerx = center
+            shuffle_button.border_rect.centerx = center
+            
             shuffle_button.draw()
-            fight_button = Button("FIGHT", GREEN, (menu_x, menu_y - height - 20), width, 50)
+            
+            fight_button = Button("FIGHT", game_font, GREEN, (menu_x, menu_y - height - 20))
+            fight_button.button.centerx = center
+            fight_button.text_rect.centerx = center
+            fight_button.border_rect.centerx = center
             fight_button.draw()
             
             if shuffle_button.checkClicked():
@@ -803,6 +881,8 @@ while True:
             if (target.checkClicked() and (game_over == False and game_progress == "Fight")):
                 hit_boxes.append(target)
                 
+                
+                
         
         #Player boxes that the enemy is targeting
         for enemy_target in enemy_target_boxes:
@@ -813,6 +893,18 @@ while True:
                 enemy_target.draw_hit()
             if enemy_target.coord in enemy_hit_boxes_coords and enemy_target.hit == False:
                 enemy_target.draw_miss()
+                
+                
+        #Play sounds in array
+        for s in sound_arr:
+            if game_over == False:
+                s.play()
+                # pygame.time.wait(500)
+                sound_arr.pop(0)
+            if game_over:
+                sound_arr.clear()  
+
+
         
         
         #Show Ships that have exploded      
@@ -822,7 +914,19 @@ while True:
                 check_game_over()
         
         if player_turn == "Enemy" and (game_over == False and game_progress == "Fight"):
+            current_time = pygame.time.get_ticks()
             enemy_choose_target()
+            print(turn_timer)
+            print(current_time)
+            
+            # while True:
+            #     current_time = pygame.time.get_ticks()
+            #     if current_time > turn_timer + 3000:
+            #         enemy_choose_target()
+            #         turn_timer = 0
+            #         break
+    
+
 
         
         
@@ -874,11 +978,7 @@ while True:
         explosions_group.draw(screen)
         
         
-        #Play sounds in array
-        for s in sound_arr:
-            s.play()
-            # pygame.time.wait(500)
-            sound_arr.pop(0)
+
         
         
         
@@ -886,17 +986,17 @@ while True:
         draw_ship_status("Enemy")
         draw_ship_status("Player")
 
-                
+    #Draw Restart Button when game is Over
     if game_over and game_progress == "Game Over":
         width = 175
-        menu_x = SCREEN_WIDTH//2 - width//2
-        menu_y = 100            
+        center = SCREEN_WIDTH//2
+        menu_y = 150            
                     
-        restart_game = Button("RESTART", GREEN, (menu_x, menu_y), width, 50)
+        restart_game = Button("RESTART", game_font, GREEN, (center, menu_y))
         restart_game.draw()
         
         if restart_game.checkClicked():
-            print("Restarting....")
+            # print("Restarting....")
             start_game()
             
 
