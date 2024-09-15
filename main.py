@@ -38,7 +38,11 @@ GREEN = (0, 255, 0)
 YELLOW = (255, 223, 0)
 ORANGE = (255, 165, 0)
 TEAL = (3, 244, 252)
+AQUA = (37, 179, 162)
 RED = (255,0,0)
+DARK_GREEN = (39, 176, 50)
+DARK_BLUE_GREEN = (3, 133, 140)
+DARK_AQUA = (14, 114, 201)
 
 #FONT SIZES
 FONT_SIZE = 40
@@ -59,12 +63,13 @@ turnClock = pygame.time.Clock()
 #Font variables
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 pygame.display.set_caption("Battle Ship")
-menu_font = pygame.font.SysFont("skia", 32)
-title_font = pygame.font.SysFont("skia", 72, bold=True)
-plain_font = pygame.font.SysFont("skia", FONT_SIZE, bold=True)
-game_font = pygame.font.SysFont("skia", 22)
-smaller_plain_font = pygame.font.SysFont("skia", SMALL_FONT_SIZE, bold=True)
-super_small_font = pygame.font.SysFont("skia", SUPER_SMALL_FONT, bold=True)
+#skia
+menu_font = pygame.font.SysFont("futura", 32)
+title_font = pygame.font.SysFont("futura", 102)
+plain_font = pygame.font.SysFont("futura", FONT_SIZE)
+game_font = pygame.font.SysFont("futura", 22)
+smaller_plain_font = pygame.font.SysFont("futura", SMALL_FONT_SIZE)
+super_small_font = pygame.font.SysFont("futura", SUPER_SMALL_FONT, bold=True)
 
 # Game Variables
 main_menu = True
@@ -93,7 +98,7 @@ sound_arr = []
 
 
 #Ship tuples with ship information and image path (path, title, length)
-ships_info = [("assets/SHIPS/ShipBattleshipHull.png", "Battleship", 5), ("assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("assets/SHIPS/ShipRescue.png", "Rescue", 4),  ("assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3), ("assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("assets/SHIPS/ShipPatrolHull.png", "Patrol Hull", 2), ("assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
+ships_info = [("./assets/SHIPS/ShipBattleshipHull.png", "Battleship", 5), ("./assets/SHIPS/ShipCarrierHull.png", "Carrier", 4), ("./assets/SHIPS/ShipRescue.png", "Rescue", 4),  ("./assets/SHIPS/ShipSubMarineHull.png", "Submarine", 3), ("./assets/SHIPS/ShipCruiserHull.png", "Cruiser", 3), ("./assets/SHIPS/ShipPatrolHull.png", "Patrol Hull", 2), ("./assets/SHIPS/ShipDestroyerHull.png", "Destroyer", 2), ('./assets/SHIPS/PlaneF-35Lightning2.png', "Plane", 1)]
 
 
 
@@ -121,7 +126,7 @@ explosion_imgs = pygame.image.load("./assets/Single_explosion.png").convert_alph
 explosions_group = pygame.sprite.Group()
 menu_larges_ship_img = pygame.image.load("./assets/shipz ripples/images/ship_large_body.png").convert_alpha()
 menu_small_ship_img = pygame.image.load("./assets/shipz ripples/images/ship_medium_body_b.png").convert_alpha()
-ripple_img = pygame.image.load("./assets/shipz ripples/images/water_ripple_big_000.png").convert_alpha()
+ripple_img = pygame.image.load("./assets/shipz ripples/images/water_ripple_big_003.png").convert_alpha()
 small_ripple_img = pygame.image.load("./assets/shipz ripples/images/water_ripple_small_004.png").convert_alpha()
 menu_ships = pygame.sprite.Group()
 ships_left = 8
@@ -143,7 +148,7 @@ class MenuShip(pygame.sprite.Sprite):
         self.rotated_image = pygame.transform.rotate(image, angle)
         self.image = pygame.transform.scale(self.rotated_image, (width, height))
         self.ripple_rotated = pygame.transform.rotate(ripple_img, angle)
-        self.ripple = pygame.transform.scale(self.ripple_rotated, (width, height + self.height//15))
+        self.ripple = pygame.transform.scale(self.ripple_rotated, (width, height + self.height - 40))
         self.rect = self.image.get_rect()
         self.rect.center = self.pos
         self.ripple_rect = self.ripple.get_rect()
@@ -152,7 +157,7 @@ class MenuShip(pygame.sprite.Sprite):
         self.direction = direction
     
     def draw_ripples(self):
-        screen.blit(self.ripple, (self.rect.left + self.width//25, self.rect.top))
+        screen.blit(self.ripple, (self.rect.left + self.width//20 - 20, self.rect.top - self.height//2 + 20))
         # screen.blit(self.ripple, self.ripple_rect.center)
     
     def draw_text(self):
@@ -405,7 +410,8 @@ class TargetBox():
     def __init__(self, type, color, pos, width, height, col, row):
         self.type = type
         self.color = color
-        self.hover_color = WHITE
+        self.hover_color = AQUA
+        self.border_color = TEAL
         self.pos = pos
         self.height = height
         self.width = width
@@ -414,12 +420,18 @@ class TargetBox():
         self.clicked = False
         self.coord = [col, row]
         self.hit = False
+        self.hoverd = False
         
     def draw(self):
         # border_rect = pygame.rect.Rect(self.pos[0] - 2, self.pos[1] - 2, self.width + 4, self.height + 4)
         if self.type == "Player":
-            pygame.draw.rect(screen, TEAL, self.border_rect)
-            pygame.draw.rect(screen, self.color, self.box)
+            if self.hoverd == False:
+                pygame.draw.rect(screen, self.border_color, self.border_rect)
+                pygame.draw.rect(screen, self.color, self.box)
+            if self.hoverd == True:
+                pygame.draw.rect(screen, self.border_color, self.border_rect)
+                pygame.draw.rect(screen, self.hover_color, self.box)
+                
         if self.type == "Enemy":
             # pygame.draw.rect(screen, CLEAR_DARK_PURPLE, self.border_rect)
             enemy_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
@@ -461,6 +473,17 @@ class TargetBox():
             if mouse_click[0] == 0:
                 # self.clicked = False
                 return False
+
+
+    def isHoveredOver(self, hover_color):
+        mouse_pos = pygame.mouse.get_pos()
+        over = self.box.collidepoint(mouse_pos)
+        
+        if over:
+            self.hoverd = True
+            self.hover_color = hover_color
+        elif over == False:
+            self.hoverd = False
             
 
 
@@ -492,7 +515,7 @@ for i in range(NUM_OF_COLS):
 
 
 
-#Load in all player ships
+#Load in all player  and enemy ships
 def load_ships(type):
     angles = [90, 180, 270, 0]
     taken_ship_locs = []
@@ -589,8 +612,8 @@ class Button:
         self.button_font = font
         self.text_surf = self.button_font.render(self.text, True, PURPLE)
         self.color = color
-        self.display_color = self.color
-        self.hover_color = WHITE
+        self.hover_color = DARK_GREEN
+        self.border_color = PURPLE
         self.pos = pos
         self.height = self.text_surf.get_height() + 20
         self.width = self.text_surf.get_width() + 20
@@ -598,12 +621,19 @@ class Button:
         self.text_rect = self.text_surf.get_rect(center = self.button.center)
         self.border_rect = pygame.rect.Rect(self.pos[0] - 2, self.pos[1] - 2, self.width + 4, self.height + 4)
         self.clicked = False
+        self.hoverd = False
         
     def draw(self):
-        # border_rect = pygame.rect.Rect(self.pos[0] - 2, self.pos[1] - 2, self.width + 4, self.height + 4)
-        pygame.draw.rect(screen, PURPLE, self.border_rect, border_radius=15)
-        pygame.draw.rect(screen, self.display_color, self.button, border_radius=15)
-        screen.blit(self.text_surf, self.text_rect)
+        if self.hoverd == False:
+            pygame.draw.rect(screen, self.border_color, self.border_rect, border_radius=15)
+            pygame.draw.rect(screen, self.color, self.button, border_radius=15)
+            self.text_surf = self.button_font.render(self.text, True, PURPLE)
+            screen.blit(self.text_surf, self.text_rect)
+        elif self.hoverd == True:
+            pygame.draw.rect(screen, self.color, self.border_rect, border_radius=15)
+            pygame.draw.rect(screen, self.hover_color, self.button, border_radius=15)
+            screen.blit(self.text_surf, self.text_rect)
+            
     
             
     def checkClicked(self):
@@ -618,12 +648,19 @@ class Button:
                 # self.update_color()
                 return True
         if mouse_click[0] == 0:
-            self.display_color = self.color
             self.clicked = False
     
-    def isHoveredOver(self, color):
+    def isHoveredOver(self, color, hover_color):
         mouse_pos = pygame.mouse.get_pos()
         over = self.button.collidepoint(mouse_pos)
+        
+        if over:
+            self.hoverd = True
+            self.hover_color = hover_color
+            self.text_surf = self.button_font.render(self.text, True, color)
+        elif over == False:
+            self.hoverd = False
+            
         
 
 
@@ -737,6 +774,7 @@ def start_game():
     for index, target in enumerate(player_target_boxes):
         target.hit = False
         target.clicked = False
+        target.hoverd = False
         enemy_target_boxes[index].hit = False
         enemy_target_boxes[index].clicked = False
         
@@ -795,6 +833,8 @@ def update_menu_ships():
 def draw_menu_ship_text():
     for ship in menu_ships:
         ship.draw_text()
+        
+# print(pygame.font.get_fonts())
              
 
 
@@ -814,6 +854,8 @@ while True:
         menu_y = SCREEN_HEIGHT//2
         new_game = Button("New Game", menu_font, GREEN, (menu_x, menu_y))
         
+        new_game.isHoveredOver(TEAL, DARK_GREEN)
+        
         
             
         update_menu_ships()
@@ -829,6 +871,7 @@ while True:
             if new_game.checkClicked() and game_progress == "Menu":
                 main_menu = False
                 game_progress = "Set Board"
+                start_game()
                 
                 
                 
@@ -845,18 +888,22 @@ while True:
         menu_y = SCREEN_HEIGHT//2
         center = SCREEN_WIDTH//2
         if game_progress == "Set Board":    
-            shuffle_button = Button("SHUFFLE SHIPS", game_font, CLEAR_BLUE, (center, menu_y - height - 100))
+            shuffle_button = Button("SHUFFLE SHIPS", game_font, TEAL, (center, menu_y - 150))
             shuffle_button.button.centerx = center
             shuffle_button.text_rect.centerx = center
             shuffle_button.border_rect.centerx = center
+            shuffle_button.isHoveredOver(TEAL, DARK_BLUE)
             
             shuffle_button.draw()
             
-            fight_button = Button("FIGHT", game_font, GREEN, (menu_x, menu_y - height - 20))
+            fight_button = Button("FIGHT", game_font, GREEN, (center, menu_y - 70))
             fight_button.button.centerx = center
             fight_button.text_rect.centerx = center
             fight_button.border_rect.centerx = center
+            fight_button.isHoveredOver(TEAL, DARK_GREEN)
             fight_button.draw()
+            
+            
             
             if shuffle_button.checkClicked():
                 shuffle_ships("Player")
@@ -864,6 +911,16 @@ while True:
             if fight_button.checkClicked():
                 game_progress = "Fight"
 
+        menu_button = Button("MAIN MENU", game_font, YELLOW, (center, menu_y + 100))
+        menu_button.button.centerx = center
+        menu_button.text_rect.centerx = center
+        menu_button.border_rect.centerx = center
+        menu_button.isHoveredOver(TEAL, (193, 196, 16))
+        menu_button.draw()
+        
+        if menu_button.checkClicked():
+            main_menu = True
+            game_progress = "Menu"
 
         #Draw Enemy ships first so that they are hidden under tarets boxes
         enemy_ships.draw(screen)
@@ -880,6 +937,13 @@ while True:
                 target.draw_hit()
             if (target.checkClicked() and (game_over == False and game_progress == "Fight")):
                 hit_boxes.append(target)
+            if game_progress == "Fight":
+                target.isHoveredOver(AQUA)
+                target.border_color = TEAL
+                target.color = BLUE
+            if game_progress == "Set Board":
+                target.border_color = DARK_BLUE_GREEN
+                target.color = DARK_BLUE
                 
                 
                 
@@ -935,6 +999,11 @@ while True:
             
         
         if game_over:
+            
+            if menu_button.checkClicked():
+                main_menu = True
+                game_progress = "Menu"
+                
             #Draw Game Over
             lose_txt = "DEFEATED!!"
             win_txt = "VICTORY!!"
@@ -989,7 +1058,7 @@ while True:
     #Draw Restart Button when game is Over
     if game_over and game_progress == "Game Over":
         width = 175
-        center = SCREEN_WIDTH//2
+        center = SCREEN_WIDTH//2 - width//2
         menu_y = 150            
                     
         restart_game = Button("RESTART", game_font, GREEN, (center, menu_y))
