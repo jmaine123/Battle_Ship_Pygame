@@ -1,3 +1,4 @@
+import os
 import time
 import sys, pygame
 import pygame.locals
@@ -6,6 +7,11 @@ from pygame import mixer
 
 pygame.init()
 pygame.mixer.init
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    base_path=getattr(sys,'_MEIPASS',os.path.dirname(os.path.abspath(__file__)))
+    return os.path.join(base_path, relative_path)
 
 SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 900
@@ -22,7 +28,7 @@ ENEMY_GRID_LEFT = SIDE_INDENT
 BORDER_WIDTH = 1
 NUM_OF_COLS = 10
 NUM_OF_ROWS = 10
-CELL_SIZE = (GRID_WIDTH - (BORDER_WIDTH * NUM_OF_COLS)) // NUM_OF_COLS - 1
+CELL_SIZE = (GRID_WIDTH - (BORDER_WIDTH * NUM_OF_COLS)) // NUM_OF_ROWS - 1
 FULL_CELL_SIZE = CELL_SIZE + (BORDER_WIDTH * 2)
 
 #COLORS
@@ -76,6 +82,7 @@ main_menu = True
 game_over = False
 game_progress = "Menu"
 ocean = pygame.image.load("assets/Ocean-Background.jpg")
+# ocean = resource_path("./Ocean-Background.jpg")
 main_menu_ocean = pygame.transform.scale(ocean, (SCREEN_WIDTH, SCREEN_HEIGHT))
 resize_ocean = pygame.transform.scale(ocean, (GRID_WIDTH, GRID_HEIGHT))
 player_ocean = resize_ocean
@@ -133,6 +140,8 @@ ships_left = 8
 enemy_ships_left = 8
 enemy_ship_updates = []
 player_ship_updates = []
+
+
 
 
 
@@ -1057,11 +1066,13 @@ while True:
 
     #Draw Restart Button when game is Over
     if game_over and game_progress == "Game Over":
-        width = 175
-        center = SCREEN_WIDTH//2 - width//2
+        center = SCREEN_WIDTH//2
         menu_y = 150            
                     
         restart_game = Button("RESTART", game_font, GREEN, (center, menu_y))
+        restart_game.button.centerx = center
+        restart_game.text_rect.centerx = center
+        restart_game.border_rect.centerx = center
         restart_game.draw()
         
         if restart_game.checkClicked():
