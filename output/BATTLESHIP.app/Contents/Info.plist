@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>BATTLESHIP</string>
+	<key>CFBundleExecutable</key>
+	<string>BATTLESHIP</string>
+	<key>CFBundleIconFile</key>
+	<string>generated-5e58b608f37c31b3578a5a4d9aa72743896de3b5088c756117b82bca3958e6d4.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>BATTLESHIP</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>BATTLESHIP</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>0.0.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+</dict>
+</plist>

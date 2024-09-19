@@ -1009,10 +1009,6 @@ while True:
         
         if game_over:
             
-            if menu_button.checkClicked():
-                main_menu = True
-                game_progress = "Menu"
-                
             #Draw Game Over
             lose_txt = "DEFEATED!!"
             win_txt = "VICTORY!!"
@@ -1053,6 +1049,8 @@ while True:
         
         #Draw Player ships on top of the grid so that the player can see them
         loaded_ships.draw(screen)
+        
+        #Draw all explosions
         explosions_group.draw(screen)
         
         
@@ -1078,6 +1076,11 @@ while True:
         if restart_game.checkClicked():
             # print("Restarting....")
             start_game()
+        
+        if menu_button.checkClicked():
+            main_menu = True
+            game_progress = "Menu"
+                
             
 
     
