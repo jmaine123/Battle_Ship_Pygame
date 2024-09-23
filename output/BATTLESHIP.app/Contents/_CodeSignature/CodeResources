@@ -124,6 +124,10 @@
 		<data>
 		dZGtGwRM4ZBLYjYr5rocu7Frm0A=
 		</data>
+		<key>Resources/assets/aim2.png</key>
+		<data>
+		ThU2gsmLhTcJNq4eJyFUaeAt7xA=
+		</data>
 		<key>Resources/assets/cannon_miss.ogg</key>
 		<data>
 		Wegu26TzGfb5NcXQBXa1OgaSzmU=
@@ -147,6 +151,10 @@
 		<key>Resources/assets/missile-sound.wav</key>
 		<data>
 		pEzIaUnheXgZOsVZ1gMYA7/gFiE=
+		</data>
+		<key>Resources/assets/red-aim2.png</key>
+		<data>
+		LtR2JiMfE1yrI3vF7yPXHKKO440=
 		</data>
 		<key>Resources/assets/shipz ripples/images/desktop.ini</key>
 		<data>
@@ -2270,6 +2278,13 @@
 			au4ZBss+m8qbqFp1hnVrNsnE0PUhCy/BK2fP9P3KeXI=
 			</data>
 		</dict>
+		<key>Resources/assets/aim2.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			j26qk69UgNJ+9qNyf/YmOVJDp+gzaLe8JCTqnTmMFvU=
+			</data>
+		</dict>
 		<key>Resources/assets/cannon_miss.ogg</key>
 		<dict>
 			<key>hash2</key>
@@ -2310,6 +2325,13 @@
 			<key>hash2</key>
 			<data>
 			3q2b+bHatTtwAAJ9w4xD7cMiS4nB/LnEqPYK9ou6AIc=
+			</data>
+		</dict>
+		<key>Resources/assets/red-aim2.png</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			LWtnBLrZiXlLMNYMroVyYCdADKuBiSpTSB6N3/BXXNA=
 			</data>
 		</dict>
 		<key>Resources/assets/shipz ripples/images/desktop.ini</key>
