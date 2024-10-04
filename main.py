@@ -10,8 +10,13 @@ pygame.mixer.init
 
 def resource_path(relative_path):
     """ Get absolute path to resource, works for dev and for PyInstaller """
-    base_path=getattr(sys,'_MEIPASS',os.path.dirname(os.path.abspath(__file__)))
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
     return os.path.join(base_path, relative_path)
+
 
 SCREEN_WIDTH = 1500
 SCREEN_HEIGHT = 900
@@ -82,7 +87,8 @@ super_small_font = pygame.font.SysFont("futura", SUPER_SMALL_FONT, bold=True)
 main_menu = True
 game_over = False
 game_progress = "Menu"
-ocean = pygame.image.load("./assets/Ocean-Background.jpg")
+# ocean = pygame.image.load("./assets/Ocean-Background.jpg")
+ocean = pygame.image.load(resource_path("./assets/Ocean-Background.jpg"))
 # ocean = resource_path("./Ocean-Background.jpg")
 main_menu_ocean = pygame.transform.scale(ocean, (SCREEN_WIDTH, SCREEN_HEIGHT))
 resize_ocean = pygame.transform.scale(ocean, (GRID_WIDTH, GRID_HEIGHT))
@@ -92,19 +98,19 @@ last_hit_message = ""
 player_turn = "Player"
 ship_direction = 0
 turn_timer = 0
-target_img = pygame.image.load("./assets/red-aim2.png")
+target_img = pygame.image.load(resource_path("./assets/red-aim2.png"))
 target_icon = pygame.transform.scale(target_img, (CELL_SIZE, CELL_SIZE))
 
 
 #Music and effects
-pirates_music = mixer.music.load("./assets/Pirates.mp3")
-splash_sound = mixer.Sound("./assets/cannon_miss.ogg")
-sinking_ship_sound = mixer.Sound("./assets/full-explosion.wav")
-plane_missile_sound = mixer.Sound("./assets/missile-sound.wav")
-plane_flying_sound = mixer.Sound("./assets/missile-sound.wav")
-enemy_small_explostion_sound = mixer.Sound("./assets/Small-Explostion.wav")
-enemy_plane_sound = mixer.Sound("./assets/Plane-Flyby.wav")
-sonar_sound = mixer.Sound("./assets/Sonar.wav")
+pirates_music = mixer.music.load(resource_path("./assets/Pirates.mp3"))
+splash_sound = mixer.Sound(resource_path("./assets/cannon_miss.ogg"))
+sinking_ship_sound = mixer.Sound(resource_path("./assets/full-explosion.wav"))
+plane_missile_sound = mixer.Sound(resource_path("./assets/missile-sound.wav"))
+plane_flying_sound = mixer.Sound(resource_path("./assets/missile-sound.wav"))
+enemy_small_explostion_sound = mixer.Sound(resource_path("./assets/Small-Explostion.wav"))
+enemy_plane_sound = mixer.Sound(resource_path("./assets/Plane-Flyby.wav"))
+sonar_sound = mixer.Sound(resource_path("./assets/Sonar.wav"))
 sound_arr = []
 
 
@@ -133,12 +139,12 @@ hit_boxes = []
 enemy_hit_boxes = []
 loaded_ships = pygame.sprite.Group()
 enemy_ships = pygame.sprite.Group()
-explosion_imgs = pygame.image.load("./assets/Single_explosion.png").convert_alpha()
+explosion_imgs = pygame.image.load(resource_path("./assets/Single_explosion.png")).convert_alpha()
 explosions_group = pygame.sprite.Group()
-menu_larges_ship_img = pygame.image.load("./assets/shipz ripples/images/ship_large_body.png").convert_alpha()
-menu_small_ship_img = pygame.image.load("./assets/shipz ripples/images/ship_medium_body_b.png").convert_alpha()
-ripple_img = pygame.image.load("./assets/shipz ripples/images/water_ripple_big_003.png").convert_alpha()
-small_ripple_img = pygame.image.load("./assets/shipz ripples/images/water_ripple_small_004.png").convert_alpha()
+menu_larges_ship_img = pygame.image.load(resource_path("./assets/shipz ripples/images/ship_large_body.png")).convert_alpha()
+menu_small_ship_img = pygame.image.load(resource_path("./assets/shipz ripples/images/ship_medium_body_b.png")).convert_alpha()
+ripple_img = pygame.image.load(resource_path("./assets/shipz ripples/images/water_ripple_big_003.png")).convert_alpha()
+small_ripple_img = pygame.image.load(resource_path("./assets/shipz ripples/images/water_ripple_small_004.png")).convert_alpha()
 menu_ships = pygame.sprite.Group()
 ships_left = 8
 enemy_ships_left = 8
@@ -336,18 +342,52 @@ def check_enemy_hit(target):
                 ships_left -= 1
             return True
     return False
+
+
+
+
+def find_enemy_nearest_targets(rand_box):
+    targets_list = []
+    print(f"Target position for enemy hit is {rand_box.pos}")
+    rand_box_index = enemy_target_boxes.index(rand_box)
+    right_box_index = rand_box_index + 1
+    left_box_index = rand_box_index - 1
+    right_target = enemy_target_boxes[right_box_index]
+    left_target = enemy_target_boxes[left_box_index]
+    
+    if right_box_index and right_target not in enemy_hit_boxes:
+        print(f' Position of box to the right is {right_target.pos}')
+        targets_list.append(right_target)
+    
+    if left_box_index and left_target not in enemy_hit_boxes:
+        print(f' Position of box to the right is {right_target.pos}')
+        targets_list.append(left_target)
+    
+    return targets_list
+    
+    print("Possible right and left targets ")
+    # print(targets_list)
+    
+    
+        
         
     
 
-def enemy_choose_target():
+def enemy_choose_target(smart_move = False, prev_move = None, nearest_targets = None):
     global plane_missile_sound
     global enemy_hit_boxes
     global player_turn
     global turn_timer
     
     
+    if (smart_move == True and nearest_targets != None) and len(nearest_targets) != 0:
+        possible_hits = nearest_targets
     
-    possible_hits = [box for box in enemy_target_boxes if box not in enemy_hit_boxes]
+    else:
+        possible_hits = [box for box in enemy_target_boxes if box not in enemy_hit_boxes]
+    
+    # possible_hits = [box for box in enemy_target_boxes if box not in enemy_hit_boxes]
+    
     if (game_over == False or len(possible_hits) != 1 ) and len(possible_hits)!= 0:
         rand_box = random.choice(possible_hits)
         if rand_box not in enemy_hit_boxes:
@@ -358,7 +398,8 @@ def enemy_choose_target():
                 new_exp = Explosion(explosion_imgs, rand_box.box.center, rand_box.width, rand_box.height)
                 explosions_group.add(new_exp)
                 player_turn = "Enemy"
-                enemy_choose_target()
+                nearest_targets = find_enemy_nearest_targets(rand_box)
+                enemy_choose_target(smart_move=True, prev_move=rand_box, nearest_targets=nearest_targets)
             else:
                 print("Miss")
                 player_turn = "Player"
@@ -543,7 +584,7 @@ def load_ships(type):
         ship_angle = random.choice(angles)
         ship_height = ship_len * CELL_SIZE
         ship_width = CELL_SIZE
-        ship_img = pygame.image.load(ship[0])
+        ship_img = pygame.image.load(resource_path(ship[0]))
         
 
         rand_box = random.choice(available_ship_locs)
@@ -1108,3 +1149,6 @@ while True:
     # Update  
     pygame.display.update()
     fpsClock.tick(fps)
+    
+if __name__ == "__main__":
+    pass
